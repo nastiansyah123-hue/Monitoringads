@@ -1574,22 +1574,28 @@ async function testKirimWA() {
   const token = document.getElementById('cfg-fonnte-token').value.trim();
   const phone = document.getElementById('cfg-wa-test-phone').value.trim();
   const statusEl = document.getElementById('fonnte-status');
-  if (!token) { statusEl.textContent = '❌ Isi Fonnte Token dulu'; return; }
-  if (!phone) { statusEl.textContent = '❌ Isi nomor HP dulu'; return; }
-  statusEl.textContent = 'Mengirim...';
+  if (!token) { statusEl.textContent = '❌ Isi Fonnte Token dulu'; statusEl.style.color='#f75c5c'; return; }
+  if (!phone) { statusEl.textContent = '❌ Isi nomor HP dulu'; statusEl.style.color='#f75c5c'; return; }
+  statusEl.textContent = 'Mengirim...'; statusEl.style.color='var(--text2)';
   try {
-    const resp = await fetch('https://fonnte.com/api/send-message', {
+    const resp = await fetch('/api/test-wa', {
       method: 'POST',
-      headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        token,
         target: phone.replace(/\D/g,''),
-        message: '✅ Test dari AdMonitor berhasil!\n\nSistem auto WA sudah terhubung.',
+        message: '✅ Test dari AdMonitor berhasil!\n\nSistem auto WA sudah terhubung dengan Fonnte.',
         countryCode: '62'
       })
     });
     const r = await resp.json();
-    statusEl.textContent = r.status ? '✅ WA terkirim!' : '❌ Gagal: ' + (r.reason || JSON.stringify(r));
-    statusEl.style.color = r.status ? '#22d3a0' : '#f75c5c';
+    if (r.status) {
+      statusEl.textContent = '✅ WA terkirim!';
+      statusEl.style.color = '#22d3a0';
+    } else {
+      statusEl.textContent = '❌ Gagal: ' + (r.reason || r.message || JSON.stringify(r));
+      statusEl.style.color = '#f75c5c';
+    }
   } catch(e) {
     statusEl.textContent = '❌ Error: ' + e.message;
     statusEl.style.color = '#f75c5c';
