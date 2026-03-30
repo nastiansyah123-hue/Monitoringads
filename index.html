@@ -572,7 +572,10 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
           </div>
           <div class="api-field" style="margin-bottom:6px;">
             <div class="api-label">Access Token</div>
-            <input class="api-input" type="password" id="cfg-meta-token" placeholder="EAAxxxxxx..." oninput="saveConfig()">
+            <div style="position:relative">
+              <input class="api-input" type="text" id="cfg-meta-token" placeholder="EAAxxxxxx..." oninput="saveConfig()" style="padding-right:70px;font-size:10px;letter-spacing:0.5px">
+              <button onclick="toggleCfgToken('cfg-meta-token',this)" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:10px;color:var(--text2);padding:2px 6px;border-radius:4px;background:var(--surface3)">Sembunyikan</button>
+            </div>
           </div>
           <div class="api-field">
             <div class="api-label">Business ID <span style="font-size:10px;color:var(--text3)">(opsional)</span></div>
@@ -1177,6 +1180,17 @@ function toggleApiPanel() {
   document.getElementById('api-panel').classList.toggle('open', apiPanelOpen);
 }
 
+function toggleCfgToken(id, btn) {
+  const input = document.getElementById(id);
+  if (input.type === 'text') {
+    input.type = 'password';
+    btn.textContent = 'Tampilkan';
+  } else {
+    input.type = 'text';
+    btn.textContent = 'Sembunyikan';
+  }
+}
+
 function saveConfig() {
   apiConfig = {
     meta: { token: document.getElementById('cfg-meta-token').value, bizId: document.getElementById('cfg-meta-biz').value },
@@ -1197,8 +1211,13 @@ function clearConfig() {
 
 function loadConfigToInputs() {
   if (apiConfig.meta) {
-    document.getElementById('cfg-meta-token').value = apiConfig.meta.token||'';
-    document.getElementById('cfg-meta-biz').value = apiConfig.meta.bizId||'';
+    const tokenInput = document.getElementById('cfg-meta-token');
+    if (tokenInput) {
+      tokenInput.value = apiConfig.meta.token||'';
+      tokenInput.type = 'text';
+    }
+    const bizInput = document.getElementById('cfg-meta-biz');
+    if (bizInput) bizInput.value = apiConfig.meta.bizId||'';
   }
   if (apiConfig.google) {
     document.getElementById('cfg-google-token').value = apiConfig.google.token||'';
