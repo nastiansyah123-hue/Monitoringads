@@ -276,6 +276,11 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 .date-input{font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);width:100%;cursor:pointer;}
 .date-input:focus{outline:none;border-color:rgba(79,142,247,0.5);}
 .date-sep{font-size:12px;color:var(--text3);flex-shrink:0;margin-top:14px;}
+/* Sort */
+.sort-icon{font-size:10px;opacity:.5;margin-left:2px;}
+th:hover .sort-icon{opacity:1;}
+th.sort-active{color:var(--text);}
+th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 @media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr);}.platform-breakdown{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.api-panel-inner{grid-template-columns:1fr;}}
 @media(max-width:700px){.sidebar{display:none;}}
 </style>
@@ -639,14 +644,14 @@ tr:hover td{background:rgba(255,255,255,0.015);}
             <table>
               <thead>
                 <tr>
-                  <th style="width:22%">Advertiser</th>
-                  <th style="width:10%">Platform</th>
-                  <th style="width:10%">Status</th>
-                  <th style="width:13%">Spend</th>
-                  <th style="width:8%">Hasil</th>
-                  <th style="width:10%">CPR</th>
-                  <th style="width:11%">Impresi</th>
-                  <th style="width:9%">Budget</th>
+                  <th style="width:22%;cursor:pointer;user-select:none" onclick="sortTable('name')" id="th-name">Advertiser <span class="sort-icon" id="si-name"></span></th>
+                  <th style="width:10%;cursor:pointer;user-select:none" onclick="sortTable('platform')" id="th-platform">Platform <span class="sort-icon" id="si-platform"></span></th>
+                  <th style="width:10%;cursor:pointer;user-select:none" onclick="sortTable('status')" id="th-status">Status <span class="sort-icon" id="si-status"></span></th>
+                  <th style="width:13%;cursor:pointer;user-select:none" onclick="sortTable('spend')" id="th-spend">Spend <span class="sort-icon" id="si-spend">↓</span></th>
+                  <th style="width:8%;cursor:pointer;user-select:none" onclick="sortTable('leads')" id="th-leads">Hasil <span class="sort-icon" id="si-leads"></span></th>
+                  <th style="width:10%;cursor:pointer;user-select:none" onclick="sortTable('cpr')" id="th-cpr">CPR <span class="sort-icon" id="si-cpr"></span></th>
+                  <th style="width:11%;cursor:pointer;user-select:none" onclick="sortTable('imp')" id="th-imp">Impresi <span class="sort-icon" id="si-imp"></span></th>
+                  <th style="width:9%;cursor:pointer;user-select:none" onclick="sortTable('budget')" id="th-budget">Budget <span class="sort-icon" id="si-budget"></span></th>
                   <th style="width:7%">Aksi</th>
                 </tr>
               </thead>
@@ -1346,9 +1351,10 @@ function renderCtrChart(data) {
 }
 
 function renderTable(data) {
+  const sorted = getSorted(data);
   const platformBadge = p => `<span class="badge badge-${p}">${p==='meta'?'Meta':p==='google'?'Google':'TikTok'}</span>`;
   const statusBadge = s => `<span class="badge badge-${s.toLowerCase()}">${s}</span>`;
-  document.getElementById('adv-body').innerHTML = data.map(a=>`
+  document.getElementById('adv-body').innerHTML = sorted.map(a=>`
     <tr>
       <td><div class="adv-name">${a.name}</div><div class="adv-id">${a.id}</div></td>
       <td>${platformBadge(a.platform)}</td>
@@ -1376,6 +1382,50 @@ function setFilter(el, f) {
 }
 
 function filterTable() { renderTable(getFiltered()); }
+
+// ── Sort ──────────────────────────────────────────────────────────
+let sortCol = 'spend';
+let sortDir = 'desc';
+
+function sortTable(col) {
+  if (sortCol === col) {
+    sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    sortCol = col;
+    sortDir = 'desc';
+  }
+  // Update header visual
+  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sort-active'));
+  const activeEl = document.getElementById('th-'+col);
+  if (activeEl) activeEl.classList.add('sort-active');
+  // Update semua sort icons
+  ['name','platform','status','spend','leads','cpr','imp','budget'].forEach(c => {
+    const el = document.getElementById('si-'+c);
+    if (!el) return;
+    if (c === col) el.textContent = sortDir === 'desc' ? '↓' : '↑';
+    else el.textContent = '';
+  });
+  renderTable(getFiltered());
+}
+
+function getSorted(data) {
+  return [...data].sort((a, b) => {
+    let va, vb;
+    switch(sortCol) {
+      case 'name':     va=a.name.toLowerCase(); vb=b.name.toLowerCase(); break;
+      case 'platform': va=a.platform; vb=b.platform; break;
+      case 'status':   va=a.status; vb=b.status; break;
+      case 'spend':    va=a.spend||0; vb=b.spend||0; break;
+      case 'leads':    va=a.leads||0; vb=b.leads||0; break;
+      case 'cpr':      va=a.leads>0?a.spend/a.leads:999999999; vb=b.leads>0?b.spend/b.leads:999999999; break;
+      case 'imp':      va=a.imp||0; vb=b.imp||0; break;
+      case 'budget':   va=a.budget||0; vb=b.budget||0; break;
+      default:         va=a.spend||0; vb=b.spend||0;
+    }
+    if (typeof va === 'string') return sortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortDir === 'asc' ? va - vb : vb - va;
+  });
+}
 
 function updateCounts() {
   const cntAll = document.getElementById('cnt-all');
