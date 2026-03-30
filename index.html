@@ -353,6 +353,8 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
   #akun-list > div{grid-template-columns:1fr!important;}
   #adv-table-wrap{display:none!important;}
   #adv-mobile-list{display:block!important;}
+  #kampanye-table-wrap{display:none!important;}
+  #kampanye-mobile-list{display:block!important;}
 }
 </style>
 </head>
@@ -946,7 +948,8 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <div class="metrics" id="kampanye-metrics"></div>
         <div class="table-card" style="margin-top:16px">
           <div class="card-head"><div class="card-title">Daftar kampanye</div></div>
-          <div class="table-wrap">
+          <!-- Desktop table -->
+          <div class="table-wrap" id="kampanye-table-wrap">
             <table>
               <thead>
                 <tr>
@@ -962,6 +965,8 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
               <tbody id="kampanye-body"></tbody>
             </table>
           </div>
+          <!-- Mobile card list -->
+          <div id="kampanye-mobile-list" style="display:none;padding:8px"></div>
         </div>
       </div>
     </div>
@@ -2905,6 +2910,7 @@ function renderKampanye(campaigns, adv) {
   const statusColor = s => s === 'ACTIVE' ? 'badge-active' : s === 'PAUSED' ? 'badge-paused' : 'badge-ended';
   const statusLabel = s => s === 'ACTIVE' ? 'Aktif' : s === 'PAUSED' ? 'Paused' : 'Ended';
 
+  // Desktop table
   document.getElementById('kampanye-body').innerHTML = campaigns.map(c => `
     <tr>
       <td><div style="font-size:12px;font-weight:500">${c.name}</div><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${c.objective||''}</div></td>
@@ -2916,6 +2922,44 @@ function renderKampanye(campaigns, adv) {
       <td class="num">${fmtImp(c.clicks)}</td>
     </tr>
   `).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2)">Tidak ada kampanye ditemukan</td></tr>';
+
+  // Mobile cards
+  const mobileEl = document.getElementById('kampanye-mobile-list');
+  if (mobileEl) {
+    mobileEl.innerHTML = campaigns.length ? campaigns.map(c => `
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:8px;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div style="flex:1;margin-right:8px">
+            <div style="font-size:13px;font-weight:600;line-height:1.4">${c.name}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">${c.objective||''}</div>
+          </div>
+          <span class="badge ${statusColor(c.status)}" style="flex-shrink:0">${statusLabel(c.status)}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div style="background:var(--surface);border-radius:7px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Spend</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtRp(c.spend)}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:7px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Hasil</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(c.leads||0).toLocaleString('id-ID')}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:7px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">CPR</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(c.leads||0)>0?fmtRp(Math.round(c.spend/(c.leads||1))):'–'}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:7px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Impresi</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtImp(c.imp)}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:7px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Klik</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtImp(c.clicks)}</div>
+          </div>
+        </div>
+      </div>
+    `).join('') : '<div style="padding:32px;text-align:center;color:var(--text2)">Tidak ada kampanye</div>';
+  }
 }
 
 function renderKampanyaDummy(adv) {
