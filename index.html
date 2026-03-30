@@ -1307,6 +1307,14 @@ if (!localStorage.getItem('admonitor_platforms') && DEFAULT_META_TOKEN !== 'PAST
 let apiPanelOpen = false;
 let currentModal = null;
 
+// ── welcomeSelected harus didefinisikan PERTAMA ──────────────────
+let welcomeSelected = new Set();
+// Isi langsung dari localStorage sebelum apapun (termasuk sebelum Supabase)
+try {
+  const _sp = localStorage.getItem('admonitor_platforms');
+  if (_sp) JSON.parse(_sp).forEach(p => welcomeSelected.add(p));
+} catch(e) {}
+
 function fmtRp(n) {
   if (!n || n === 0) return 'Rp0';
   return 'Rp' + Math.round(n).toLocaleString('id-ID');
@@ -2643,7 +2651,6 @@ async function applyKampDate() {
 }
 
 // ── Perbaikan: token tersimpan permanen di localStorage ──────────
-let welcomeSelected = new Set();
 
 function toggleWelcomePlatform(p) {
   const card = document.getElementById('wp-'+p);
