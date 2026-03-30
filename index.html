@@ -947,7 +947,26 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       <div class="content">
         <div class="metrics" id="kampanye-metrics"></div>
         <div class="table-card" style="margin-top:16px">
-          <div class="card-head"><div class="card-title">Daftar kampanye</div></div>
+          <div class="card-head" style="flex-wrap:wrap;gap:8px">
+            <div class="card-title">Daftar kampanye</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <!-- Filter status -->
+              <div style="display:flex;gap:4px">
+                <button class="pill active" id="kf-all" onclick="setKampFilter('all',this)" style="font-size:11px;padding:3px 10px">Semua</button>
+                <button class="pill" id="kf-active" onclick="setKampFilter('ACTIVE',this)" style="font-size:11px;padding:3px 10px">Aktif</button>
+                <button class="pill" id="kf-paused" onclick="setKampFilter('PAUSED',this)" style="font-size:11px;padding:3px 10px">Paused</button>
+                <button class="pill" id="kf-ended" onclick="setKampFilter('ARCHIVED',this)" style="font-size:11px;padding:3px 10px">Ended</button>
+              </div>
+              <!-- Sort spend -->
+              <select id="kamp-sort" onchange="applyKampSort()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--sans);cursor:pointer">
+                <option value="spend_desc">Spend ↓</option>
+                <option value="spend_asc">Spend ↑</option>
+                <option value="leads_desc">Hasil ↓</option>
+                <option value="cpr_asc">CPR terbaik</option>
+                <option value="name_asc">Nama A-Z</option>
+              </select>
+            </div>
+          </div>
           <!-- Desktop table -->
           <div class="table-wrap" id="kampanye-table-wrap">
             <table>
@@ -2228,83 +2247,44 @@ function toggleEditLimit(id) {
   edit.style.display = isOpen ? 'none' : 'block';
 }
 
-async function sudahBayarMobile(id, currentSpend) {
-  const input = document.getElementById('mob-bayar-'+id);
-  const nominal = parseFloat(input?.value || 0);
-  if (!nominal || nominal <= 0) { alert('Masukkan nominal pembayaran'); return; }
+// Fungsi terpusat untuk proses pembayaran
+async function prosesBayar(id, currentSpend, nominal) {
+  if (!nominal || nominal <= 0) { alert('Masukkan nominal pembayaran'); return false; }
   const cfg = manualLimits[id] || {};
   const spendSejak = cfg.spendSaatSet != null ? Math.max(0, currentSpend - cfg.spendSaatSet) : 0;
-  const saldoTertunggak = (cfg.saldoAwal||0) + spendSejak;
+  const saldoTertunggak = (cfg.saldoAwal || 0) + spendSejak;
   const sisaSaldo = Math.max(0, saldoTertunggak - nominal);
   const riwayat = cfg.riwayatBayar || [];
   riwayat.push({ nominal, tanggal: new Date().toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}) });
   manualLimits[id] = { ...cfg, saldoAwal: sisaSaldo, spendSaatSet: currentSpend, riwayatBayar: riwayat.slice(-10) };
   localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
-  renderTable(getFiltered());
   if (currentUser) {
-    sb.from('account_limits').upsert({ user_id:currentUser.id, account_id:id, limit_amount:cfg.limit||0, saldo_awal:sisaSaldo, spend_saat_set:currentSpend, updated_at:new Date().toISOString() }, { onConflict:'user_id,account_id' }).catch(()=>{});
+    const { error } = await sb.from('account_limits').upsert({
+      user_id: currentUser.id, account_id: id,
+      limit_amount: cfg.limit || 0, saldo_awal: sisaSaldo,
+      spend_saat_set: currentSpend, updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,account_id' });
+    if (error) console.error('Supabase bayar error:', error.message);
   }
+  return true;
+}
+
+async function sudahBayarMobile(id, currentSpend) {
+  const input = document.getElementById('mob-bayar-'+id);
+  const ok = await prosesBayar(id, currentSpend, parseFloat(input?.value || 0));
+  if (ok) { input.value = ''; renderTable(getFiltered()); }
 }
 
 async function sudahBayarTabel(id, currentSpend) {
   const input = document.getElementById('tbl-bayar-'+id);
-  const nominal = parseFloat(input?.value || 0);
-  if (!nominal || nominal <= 0) { alert('Masukkan nominal pembayaran'); return; }
-  const cfg = manualLimits[id] || {};
-  const spendSejak = cfg.spendSaatSet != null ? Math.max(0, currentSpend - cfg.spendSaatSet) : 0;
-  const saldoTertunggak = (cfg.saldoAwal||0) + spendSejak;
-  const sisaSaldo = Math.max(0, saldoTertunggak - nominal);
-  const riwayat = cfg.riwayatBayar || [];
-  riwayat.push({ nominal, tanggal: new Date().toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}) });
-  manualLimits[id] = { ...cfg, saldoAwal: sisaSaldo, spendSaatSet: currentSpend, riwayatBayar: riwayat.slice(-10) };
-  localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
-  renderTable(getFiltered());
-  renderAkun(ALL_DATA);
-  if (currentUser) {
-    sb.from('account_limits').upsert({ user_id:currentUser.id, account_id:id, limit_amount:cfg.limit||0, saldo_awal:sisaSaldo, spend_saat_set:currentSpend, updated_at:new Date().toISOString() }, { onConflict:'user_id,account_id' }).catch(()=>{});
-  }
+  const ok = await prosesBayar(id, currentSpend, parseFloat(input?.value || 0));
+  if (ok) { input.value = ''; renderTable(getFiltered()); renderAkun(ALL_DATA); }
 }
 
 async function sudahBayar(id, currentSpend) {
   const input = document.getElementById('bayar-input-'+id);
-  const nominal = parseFloat(input?.value || 0);
-  if (!nominal || nominal <= 0) { alert('Masukkan nominal pembayaran'); return; }
-
-  const cfg = manualLimits[id] || {};
-  const saldoAwal = cfg.saldoAwal || 0;
-  const spendSejak = cfg.spendSaatSet != null ? Math.max(0, currentSpend - cfg.spendSaatSet) : 0;
-  const saldoTertunggak = saldoAwal + spendSejak;
-  const sisaSaldo = Math.max(0, saldoTertunggak - nominal);
-
-  // Tambah ke riwayat
-  const riwayat = cfg.riwayatBayar || [];
-  const now = new Date();
-  riwayat.push({
-    nominal,
-    tanggal: now.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})
-  });
-
-  // Update: saldo baru = sisa setelah bayar, reset titik spend
-  manualLimits[id] = {
-    ...cfg,
-    saldoAwal: sisaSaldo,
-    spendSaatSet: currentSpend,
-    riwayatBayar: riwayat.slice(-10) // simpan max 10 riwayat
-  };
-  localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
-  renderAkun(ALL_DATA);
-
-  // Sync Supabase di background
-  if (currentUser) {
-    sb.from('account_limits').upsert({
-      user_id: currentUser.id,
-      account_id: id,
-      limit_amount: cfg.limit || 0,
-      saldo_awal: sisaSaldo,
-      spend_saat_set: currentSpend,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,account_id' }).catch(()=>{});
-  }
+  const ok = await prosesBayar(id, currentSpend, parseFloat(input?.value || 0));
+  if (ok) { input.value = ''; renderAkun(ALL_DATA); }
 }
 
 async function saveManualLimit(id, currentSpend) {
@@ -2895,6 +2875,9 @@ async function fetchKampanyeMeta(adv) {
 }
 
 function renderKampanye(campaigns, adv) {
+  // Simpan semua kampanye untuk filter (hanya saat adv ada)
+  if (adv !== null) { _allCampaigns = campaigns; _kampFilter = 'all'; _kampSort = 'spend_desc'; }
+
   const totalSpend = campaigns.reduce((s,c)=>s+c.spend,0);
   const avgCtr = campaigns.length ? campaigns.reduce((s,c)=>s+c.ctr,0)/campaigns.length : 0;
   const avgRoas = campaigns.length ? campaigns.reduce((s,c)=>s+c.roas,0)/campaigns.length : 0;
@@ -3147,6 +3130,38 @@ function initDatePicker() {
 let dateRangeAkun = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' };
 let dateRangeKamp = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' };
 let currentKampAdvId = null;
+let _allCampaigns = []; // simpan semua kampanye untuk filter
+let _kampFilter = 'all';
+let _kampSort = 'spend_desc';
+
+function setKampFilter(status, el) {
+  _kampFilter = status;
+  document.querySelectorAll('#kf-all,#kf-active,#kf-paused,#kf-ended').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderKampanye(getFilteredKamp(), null);
+}
+
+function applyKampSort() {
+  _kampSort = document.getElementById('kamp-sort').value;
+  renderKampanye(getFilteredKamp(), null);
+}
+
+function getFilteredKamp() {
+  let data = [..._allCampaigns];
+  if (_kampFilter !== 'all') data = data.filter(c => c.status === _kampFilter);
+  switch(_kampSort) {
+    case 'spend_desc': data.sort((a,b) => (b.spend||0)-(a.spend||0)); break;
+    case 'spend_asc':  data.sort((a,b) => (a.spend||0)-(b.spend||0)); break;
+    case 'leads_desc': data.sort((a,b) => (b.leads||0)-(a.leads||0)); break;
+    case 'cpr_asc':    data.sort((a,b) => {
+      const ca = (a.leads||0)>0 ? a.spend/a.leads : 999999;
+      const cb = (b.leads||0)>0 ? b.spend/b.leads : 999999;
+      return ca - cb;
+    }); break;
+    case 'name_asc':   data.sort((a,b) => a.name.localeCompare(b.name)); break;
+  }
+  return data;
+}
 
 function buildDateHelper(suffix, rangeObj) {
   return {
