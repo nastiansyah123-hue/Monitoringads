@@ -515,6 +515,10 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
         Ad Accounts
       </button>
+      <button class="nav-item" id="nav-wa" onclick="showView('wa')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L0 24l6.337-1.504A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.68-.52-5.21-1.42l-.37-.22-3.86.916.978-3.77-.24-.39A10 10 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        WA Auto
+      </button>
     </div>
     <div class="nav-section">
       <div class="nav-label">Integrasi</div>
@@ -665,34 +669,6 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <button class="btn btn-sm" onclick="clearConfig()">Reset</button>
         <button class="btn btn-sm" onclick="syncLimitsToSupabase()" style="background:rgba(34,211,160,0.15);color:#22d3a0;border-color:rgba(34,211,160,0.3)">☁ Sync Budget ke Cloud</button>
         <span id="test-result" style="font-size:11px;color:var(--text2);font-family:var(--mono);"></span>
-      </div>
-      <!-- Fonnte WA Setting -->
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:11px;font-weight:600;color:#22d3a0;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#22d3a0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L0 24l6.337-1.504A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.68-.52-5.21-1.42l-.37-.22-3.86.916.978-3.77-.24-.39A10 10 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-          WhatsApp Auto (Fonnte)
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div class="api-field">
-            <div class="api-label">Fonnte Token</div>
-            <input class="api-input" type="password" id="cfg-fonnte-token" placeholder="Token dari fonnte.com" oninput="saveFonnteConfig()">
-          </div>
-          <div class="api-field">
-            <div class="api-label">Jadwal WA <span style="color:var(--text3)">(jam WIB, pisah koma)</span></div>
-            <input class="api-input" type="text" id="cfg-wa-jadwal" placeholder="9,14,18,21" value="9,14,18,21" oninput="saveFonnteConfig()">
-          </div>
-          <div class="api-field">
-            <div class="api-label">Test kirim WA</div>
-            <div style="display:flex;gap:6px">
-              <input class="api-input" type="text" id="cfg-wa-test-phone" placeholder="628123456789" style="flex:1">
-              <button class="btn btn-sm" onclick="testKirimWA()" style="flex-shrink:0">Kirim</button>
-            </div>
-          </div>
-        </div>
-        <div style="margin-top:6px;font-size:10px;color:var(--text3)">
-          ⚠️ Token Fonnte & jadwal harus di-set di <strong>Vercel Environment Variables</strong> juga (FONNTE_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_KEY, META_TOKEN, CRON_SECRET). Cron otomatis jalan sesuai jadwal.
-        </div>
-        <div id="fonnte-status" style="font-size:11px;color:var(--text2);margin-top:6px;font-family:var(--mono)"></div>
       </div>
     </div>
 
@@ -1105,6 +1081,69 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
           <button onclick="closeAccModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:13px">Batal</button>
           <button onclick="saveAcc()" id="acc-modal-btn" style="padding:8px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500">Simpan</button>
         </div>
+      </div>
+    </div>
+
+    <!-- View: WA Auto -->
+    <div id="view-wa" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div>
+          <h1 style="font-size:17px;font-weight:600">WA Auto</h1>
+          <p style="font-size:11px;color:var(--text2);margin-top:2px">Kirim notifikasi WhatsApp otomatis ke advertiser</p>
+        </div>
+      </div>
+      <div style="padding:22px 28px">
+
+        <!-- Fonnte Config -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#22d3a0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L0 24l6.337-1.504A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.68-.52-5.21-1.42l-.37-.22-3.86.916.978-3.77-.24-.39A10 10 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+            Konfigurasi Fonnte
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Fonnte Token</label>
+              <input id="cfg-fonnte-token" type="password" placeholder="Token dari fonnte.com" oninput="saveFonnteConfig()"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Jadwal WA (jam WIB, pisah koma)</label>
+              <input id="cfg-wa-jadwal" type="text" placeholder="9,14,18,21" value="9,14,18,21" oninput="saveFonnteConfig()"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Test kirim ke nomor</label>
+              <input id="cfg-wa-test-phone" type="text" placeholder="628123456789"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
+            </div>
+            <button onclick="testKirimWA()" style="padding:9px 20px;border-radius:8px;border:none;background:#22d3a0;color:white;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);flex-shrink:0">
+              Kirim Test WA
+            </button>
+          </div>
+          <div id="fonnte-status" style="font-size:12px;color:var(--text2);margin-top:10px;font-family:var(--mono)"></div>
+          <div style="margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6">
+            ⚠️ Agar cron otomatis berjalan, set di <strong>Vercel Environment Variables</strong>:<br>
+            <code>FONNTE_TOKEN</code> · <code>SUPABASE_URL</code> · <code>SUPABASE_SERVICE_KEY</code> · <code>META_TOKEN</code> · <code>CRON_SECRET</code>
+          </div>
+        </div>
+
+        <!-- Jadwal otomatis info -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:14px">Jadwal Otomatis</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+            ${['09.00','14.00','18.00','21.00'].map(j=>`
+            <div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:#4f8ef7">${j}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:4px">WIB</div>
+            </div>`).join('')}
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text2)">
+            Setiap jam tersebut, sistem otomatis fetch data kampanye dari Meta API, analisa performa, dan kirim laporan ke WhatsApp PIC advertiser.
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -2649,11 +2688,11 @@ function backToWelcome() {
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
   localStorage.setItem('admonitor_last_view', view);
-  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts'].forEach(id => {
+  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  ['dashboard','akun','advertisers','adaccounts'].forEach(v => {
+  ['dashboard','akun','advertisers','adaccounts','wa'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if (el) el.classList.remove('active');
   });
@@ -2680,6 +2719,11 @@ function showView(view) {
     document.getElementById('nav-adaccounts').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadAccList();
+  } else if (view === 'wa') {
+    document.getElementById('view-wa').style.display = 'block';
+    document.getElementById('nav-wa').classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
+    loadFonnteConfig();
   }
   window.scrollTo(0, 0);
 }
