@@ -1016,7 +1016,17 @@ async function fetchAndRenderMeta(adAccounts) {
 
       // Ambil jumlah lead dari actions
       const actions = row?.actions || [];
-      const leadAction = actions.find(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
+      
+      // Debug: log semua action types ke console
+      if (actions.length > 0) {
+        console.log(`[${acc.name}] Actions:`, actions.map(a => `${a.action_type}=${a.value}`).join(', '));
+      } else {
+        console.log(`[${acc.name}] Tidak ada actions`);
+      }
+
+      // Coba semua kemungkinan action_type untuk lead
+      const leadTypes = ['lead','onsite_conversion.lead_grouped','onsite_conversion.messaging_first_reply','offsite_conversion.fb_pixel_lead','contact_total'];
+      const leadAction = actions.find(a => leadTypes.includes(a.action_type));
       const leads = parseInt(leadAction?.value || 0);
       const cpr = leads > 0 ? Math.round(spend / leads) : 0;
 
