@@ -87,9 +87,9 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;line-height:1.6;min-height:100vh;}
-.layout{display:flex;min-height:100vh;}
+.layout{display:flex;height:100vh;overflow:hidden;}
 .sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
-.main{flex:1;overflow-x:hidden;}
+.main{flex:1;overflow-x:hidden;overflow-y:auto;min-height:0;display:flex;flex-direction:column;}
 .logo{display:flex;align-items:center;gap:10px;padding:0 20px 28px;}
 .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);border-radius:8px;display:flex;align-items:center;justify-content:center;}
 .logo-icon svg{width:18px;height:18px;fill:white;}
@@ -634,60 +634,60 @@ tr:hover td{background:rgba(255,255,255,0.015);}
       </div>
     </div>
 
-  </div>
-</div><!-- /app-layout -->
-
-<!-- View: Akun -->
-<div id="view-akun" style="display:none;flex:1;overflow-x:hidden;">
-  <div class="page-header">
-    <div class="page-title">
-      <h1>Akun</h1>
-      <p id="akun-sub">Klik akun untuk lihat kampanye</p>
-    </div>
-    <div class="header-actions">
-      <input class="search" type="text" id="search-akun" placeholder="Cari akun..." oninput="filterAkun()" style="width:220px">
-    </div>
-  </div>
-  <div class="content">
-    <div id="akun-list"></div>
-  </div>
-</div>
-
-<!-- View: Kampanye per Akun -->
-<div id="view-kampanye" style="display:none;flex:1;overflow-x:hidden;">
-  <div class="page-header">
-    <div class="page-title">
-      <button style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:12px;font-family:var(--sans);display:flex;align-items:center;gap:5px;margin-bottom:4px;padding:0" onclick="showView('akun')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-        Kembali ke Akun
-      </button>
-      <h1 id="kampanye-title">Kampanye</h1>
-      <p id="kampanye-sub"></p>
-    </div>
-  </div>
-  <div class="content">
-    <div class="metrics" id="kampanye-metrics"></div>
-    <div class="table-card" style="margin-top:16px">
-      <div class="card-head"><div class="card-title">Daftar kampanye</div></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:35%">Nama Kampanye</th>
-              <th style="width:15%">Spend</th>
-              <th style="width:10%">CTR</th>
-              <th style="width:10%">ROAS</th>
-              <th style="width:12%">Impresi</th>
-              <th style="width:10%">Status</th>
-              <th style="width:8%">Klik</th>
-            </tr>
-          </thead>
-          <tbody id="kampanye-body"></tbody>
-        </table>
+    <!-- View: Akun -->
+    <div id="view-akun" style="display:none;flex-direction:column;overflow-y:auto;">
+      <div class="page-header">
+        <div class="page-title">
+          <h1>Akun</h1>
+          <p id="akun-sub">Klik akun untuk lihat kampanye</p>
+        </div>
+        <div class="header-actions">
+          <input class="search" type="text" id="search-akun" placeholder="Cari akun..." oninput="filterAkun()" style="width:220px">
+        </div>
+      </div>
+      <div class="content">
+        <div id="akun-list"></div>
       </div>
     </div>
-  </div>
-</div>
+
+    <!-- View: Kampanye per Akun -->
+    <div id="view-kampanye" style="display:none;flex-direction:column;overflow-y:auto;">
+      <div class="page-header">
+        <div class="page-title">
+          <button style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:12px;font-family:var(--sans);display:flex;align-items:center;gap:5px;margin-bottom:4px;padding:0" onclick="showView('akun')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            Kembali ke Akun
+          </button>
+          <h1 id="kampanye-title">Kampanye</h1>
+          <p id="kampanye-sub"></p>
+        </div>
+      </div>
+      <div class="content">
+        <div class="metrics" id="kampanye-metrics"></div>
+        <div class="table-card" style="margin-top:16px">
+          <div class="card-head"><div class="card-title">Daftar kampanye</div></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:35%">Nama Kampanye</th>
+                  <th style="width:15%">Spend</th>
+                  <th style="width:10%">CTR</th>
+                  <th style="width:10%">ROAS</th>
+                  <th style="width:12%">Impresi</th>
+                  <th style="width:10%">Status</th>
+                  <th style="width:8%">Klik</th>
+                </tr>
+              </thead>
+              <tbody id="kampanye-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app-layout -->
 
 <!-- Setup Modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
@@ -1296,7 +1296,7 @@ function backToWelcome() {
 
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
-  // Sembunyikan semua view
+  // Sembunyikan semua view dalam .main
   document.getElementById('main-view').style.display = 'none';
   document.getElementById('view-akun').style.display = 'none';
   document.getElementById('view-kampanye').style.display = 'none';
@@ -1318,7 +1318,10 @@ function showView(view) {
     renderAkun(ALL_DATA);
   } else if (view === 'kampanye') {
     document.getElementById('view-kampanye').style.display = 'flex';
+    document.getElementById('nav-akun').classList.add('active');
   }
+  // Scroll ke atas
+  window.scrollTo(0, 0);
 }
 
 function renderAkun(data) {
