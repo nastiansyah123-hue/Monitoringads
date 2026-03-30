@@ -661,6 +661,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
         <button class="btn btn-primary btn-sm" onclick="testConnections()">Test Koneksi</button>
         <button class="btn btn-sm" onclick="clearConfig()">Reset</button>
+        <button class="btn btn-sm" onclick="syncLimitsToSupabase()" style="background:rgba(34,211,160,0.15);color:#22d3a0;border-color:rgba(34,211,160,0.3)">☁ Sync Budget ke Cloud</button>
         <span id="test-result" style="font-size:11px;color:var(--text2);font-family:var(--mono);"></span>
       </div>
       <!-- Fonnte WA Setting -->
@@ -1550,6 +1551,44 @@ function toggleCfgToken(id, btn) {
   } else {
     input.type = 'text';
     btn.textContent = 'Sembunyikan';
+  }
+}
+
+async function syncLimitsToSupabase() {
+  if (!currentUser) { alert('Login dulu!'); return; }
+  const result = document.getElementById('test-result');
+  result.textContent = 'Menyinkronkan...';
+  result.style.color = 'var(--text2)';
+
+  const limits = JSON.parse(localStorage.getItem('admonitor_limits') || '{}');
+  const entries = Object.entries(limits);
+  if (!entries.length) {
+    result.textContent = '⚠ Tidak ada data budget di device ini';
+    result.style.color = '#f5a623';
+    return;
+  }
+
+  let sukses = 0, gagal = 0;
+  for (const [accountId, cfg] of entries) {
+    if (!cfg.limit || cfg.limit <= 0) continue;
+    const { error } = await sb.from('account_limits').upsert({
+      user_id: currentUser.id,
+      account_id: accountId,
+      limit_amount: cfg.limit || 0,
+      saldo_awal: cfg.saldoAwal || 0,
+      spend_saat_set: cfg.spendSaatSet || 0,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,account_id' });
+    if (error) { gagal++; console.error(accountId, error.message); }
+    else sukses++;
+  }
+
+  if (sukses > 0) {
+    result.textContent = `✅ ${sukses} akun berhasil disync ke cloud!${gagal > 0 ? ` (${gagal} gagal)` : ''}`;
+    result.style.color = '#22d3a0';
+  } else {
+    result.textContent = `❌ Semua gagal. Cek console untuk detail.`;
+    result.style.color = '#f75c5c';
   }
 }
 
