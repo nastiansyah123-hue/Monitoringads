@@ -567,11 +567,10 @@ async function testConnections() {
   const results = [];
   if (isConnected('meta')) {
     try {
-      const r = await fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${apiConfig.meta.token}&fields=id,name,account_status&limit=5`);
-      const d = await r.json();
-      if (d.data) {
-        results.push(`Meta ✓ (${d.data.length} ad account ditemukan)`);
-        await fetchAndRenderMeta(d.data);
+      const allAccounts = await fetchAllMetaAccounts(apiConfig.meta.token);
+      if (allAccounts.length) {
+        results.push(`Meta ✓ (${allAccounts.length} ad account ditemukan)`);
+        await fetchAndRenderMeta(allAccounts);
       } else {
         results.push('Meta ✗ (' + (d.error?.message || 'error') + ')');
       }
@@ -581,6 +580,19 @@ async function testConnections() {
   if (isConnected('tiktok')) results.push('TikTok → via backend');
   if (!results.length) res.textContent = 'Belum ada API yang dikonfigurasi.';
   else res.textContent = results.join(' · ');
+}
+
+async function fetchAllMetaAccounts(token) {
+  let all = [];
+  let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status&limit=200`;
+  while (url) {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.error) break;
+    all = all.concat(d.data || []);
+    url = d.paging?.next || null;
+  }
+  return all;
 }
 
 async function fetchAndRenderMeta(adAccounts) {
@@ -859,9 +871,8 @@ renderAll();
 
 // Auto fetch Meta jika token sudah tersimpan
 if (isConnected('meta')) {
-  fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${apiConfig.meta.token}&fields=id,name,account_status&limit=25`)
-    .then(r=>r.json())
-    .then(d=>{ if(d.data) fetchAndRenderMeta(d.data); })
+  fetchAllMetaAccounts(apiConfig.meta.token)
+    .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
     .catch(()=>{});
 }
 </script>
