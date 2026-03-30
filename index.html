@@ -1017,14 +1017,13 @@ async function fetchAndRenderMeta(adAccounts) {
       // Ambil jumlah lead dari actions
       const actions = row?.actions || [];
 
-      // Ambil hasil utama: chat/pesan masuk (sesuai tipe kampanye Herbal Jaya)
+      // Hasil = web_in_store_purchase (pembelian via toko)
       const hasilTypes = [
-        'onsite_conversion.messaging_first_reply',      // Pesan pertama masuk
-        'onsite_conversion.messaging_conversation_started_7d', // Percakapan dimulai
-        'lead',                                          // Form lead
-        'onsite_conversion.lead_grouped',               // Lead grouped
-        'offsite_conversion.fb_pixel_lead',             // Pixel lead
-        'contact_total',                                // Total kontak
+        'web_in_store_purchase',
+        'omni_purchase',
+        'offsite_conversion.fb_pixel_purchase',
+        'lead',
+        'onsite_conversion.lead_grouped',
       ];
       const hasilAction = actions.find(a => hasilTypes.includes(a.action_type));
       const leads = parseInt(hasilAction?.value || 0);
@@ -1434,7 +1433,7 @@ async function fetchKampanyeMeta(adv) {
         const di = await ri.json();
         const row = di.data?.[0];
         const actions = row?.actions || [];
-        const hasilTypes = ['onsite_conversion.messaging_first_reply','onsite_conversion.messaging_conversation_started_7d','lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead','contact_total'];
+        const hasilTypes = ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','lead','onsite_conversion.lead_grouped'];
         const hasilAction = actions.find(a => hasilTypes.includes(a.action_type));
         const leads = parseInt(hasilAction?.value || 0);
         return {
