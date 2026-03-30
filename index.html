@@ -2598,23 +2598,44 @@ function renderAll() {
 }
 
 function renderBudgetAlerts(data) {
-  const kritis = data.filter(a => a.spendCap > 0 && a.budget >= 90);
-  const hampir = data.filter(a => a.spendCap > 0 && a.budget >= 70 && a.budget < 90);
   const alertEl = document.getElementById('budget-alert-bar');
   if (!alertEl) return;
-  if (kritis.length === 0 && hampir.length === 0) { alertEl.style.display='none'; return; }
+
+  const kritis = [];
+  const hampir = [];
+
+  data.forEach(a => {
+    const cfg = manualLimits[a.id] || {};
+    const limit = cfg.limit || 0;
+    if (!limit) return;
+    const spendAPI = a.amountSpentRp || a.spend || 0;
+    const spendSejak = cfg.spendSaatSet != null ? Math.max(0, spendAPI - cfg.spendSaatSet) : 0;
+    const saldoTertunggak = (cfg.saldoAwal || 0) + spendSejak;
+    const sisa = Math.max(0, limit - saldoTertunggak);
+    const pct = Math.min(100, Math.round(saldoTertunggak / limit * 100));
+
+    if (pct >= 90) kritis.push({ name: a.name, pct, sisa });
+    else if (pct >= 70) hampir.push({ name: a.name, pct, sisa });
+  });
+
+  if (!kritis.length && !hampir.length) { alertEl.style.display = 'none'; return; }
+
   alertEl.style.display = 'block';
   let html = '';
-  if (kritis.length > 0) {
-    html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${hampir.length>0?'8px':'0'}">
-      <div style="width:8px;height:8px;border-radius:50%;background:#f75c5c;flex-shrink:0;animation:pulse 2s infinite"></div>
-      <span style="font-size:12px;color:#f75c5c"><strong>Kritis (≥90%):</strong> ${kritis.map(a=>`${a.name} (${a.budget}%, sisa ${fmtRp(a.sisaBudget)})`).join(' · ')}</span>
+  if (kritis.length) {
+    html += `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:${hampir.length?'8px':'0'}">
+      <div style="width:8px;height:8px;border-radius:50%;background:#f75c5c;flex-shrink:0;margin-top:3px;animation:pulse 2s infinite"></div>
+      <span style="font-size:12px;color:#f75c5c;line-height:1.6">
+        <strong>🚨 Kritis (≥90%):</strong> ${kritis.map(a=>`${a.name} — <strong>${a.pct}%</strong> terpakai, sisa <strong>${fmtRp(a.sisa)}</strong>`).join(' &nbsp;·&nbsp; ')}
+      </span>
     </div>`;
   }
-  if (hampir.length > 0) {
-    html += `<div style="display:flex;align-items:center;gap:8px">
-      <div style="width:8px;height:8px;border-radius:50%;background:#f5a623;flex-shrink:0"></div>
-      <span style="font-size:12px;color:#f5a623"><strong>Hampir habis (≥70%):</strong> ${hampir.map(a=>`${a.name} (${a.budget}%, sisa ${fmtRp(a.sisaBudget)})`).join(' · ')}</span>
+  if (hampir.length) {
+    html += `<div style="display:flex;align-items:flex-start;gap:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:#f5a623;flex-shrink:0;margin-top:3px"></div>
+      <span style="font-size:12px;color:#f5a623;line-height:1.6">
+        <strong>⚠ Hampir habis (≥70%):</strong> ${hampir.map(a=>`${a.name} — <strong>${a.pct}%</strong> terpakai, sisa <strong>${fmtRp(a.sisa)}</strong>`).join(' &nbsp;·&nbsp; ')}
+      </span>
     </div>`;
   }
   alertEl.innerHTML = html;
