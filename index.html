@@ -642,7 +642,37 @@ tr:hover td{background:rgba(255,255,255,0.015);}
           <p id="akun-sub">Klik akun untuk lihat kampanye</p>
         </div>
         <div class="header-actions">
-          <input class="search" type="text" id="search-akun" placeholder="Cari akun..." oninput="filterAkun()" style="width:220px">
+          <div class="date-picker-wrap" id="date-picker-wrap-akun">
+            <button class="btn date-trigger" id="date-trigger-akun" onclick="toggleDatePickerAkun()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:5px;vertical-align:-1px;opacity:.6"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+              <span id="date-label-akun">30 Hari Terakhir</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="margin-left:4px;opacity:.5"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+            <div class="date-dropdown" id="date-dropdown-akun">
+              <div class="date-presets">
+                <button class="date-preset" onclick="setPresetAkun('today')">Hari ini</button>
+                <button class="date-preset" onclick="setPresetAkun('yesterday')">Kemarin</button>
+                <button class="date-preset" onclick="setPresetAkun('7')">7 Hari terakhir</button>
+                <button class="date-preset active" onclick="setPresetAkun('30')">30 Hari terakhir</button>
+                <button class="date-preset" onclick="setPresetAkun('90')">90 Hari terakhir</button>
+                <button class="date-preset" onclick="setPresetAkun('this_month')">Bulan ini</button>
+                <button class="date-preset" onclick="setPresetAkun('last_month')">Bulan lalu</button>
+                <button class="date-preset" onclick="setPresetAkun('max')">Maksimal (1 tahun)</button>
+              </div>
+              <div class="date-divider"></div>
+              <div class="date-custom">
+                <div class="date-custom-label">Pilih tanggal</div>
+                <div class="date-range-inputs">
+                  <div class="date-field"><label>Dari</label><input type="date" id="date-from-akun" class="date-input" onchange="setCustomDateAkun()"></div>
+                  <div class="date-sep">→</div>
+                  <div class="date-field"><label>Sampai</label><input type="date" id="date-to-akun" class="date-input" onchange="setCustomDateAkun()"></div>
+                </div>
+                <div id="date-range-info-akun" style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)"></div>
+              </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:12px" onclick="applyAkunDate()">Terapkan</button>
+            </div>
+          </div>
+          <input class="search" type="text" id="search-akun" placeholder="Cari akun..." oninput="filterAkun()" style="width:180px">
         </div>
       </div>
       <div class="content">
@@ -661,7 +691,38 @@ tr:hover td{background:rgba(255,255,255,0.015);}
           <h1 id="kampanye-title">Kampanye</h1>
           <p id="kampanye-sub"></p>
         </div>
-      </div>
+        <div class="header-actions">
+          <div class="date-picker-wrap" id="date-picker-wrap-kamp">
+            <button class="btn date-trigger" id="date-trigger-kamp" onclick="toggleDatePickerKamp()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:5px;vertical-align:-1px;opacity:.6"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+              <span id="date-label-kamp">30 Hari Terakhir</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="margin-left:4px;opacity:.5"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+            <div class="date-dropdown" id="date-dropdown-kamp">
+              <div class="date-presets">
+                <button class="date-preset" onclick="setPresetKamp('today')">Hari ini</button>
+                <button class="date-preset" onclick="setPresetKamp('yesterday')">Kemarin</button>
+                <button class="date-preset" onclick="setPresetKamp('7')">7 Hari terakhir</button>
+                <button class="date-preset active" onclick="setPresetKamp('30')">30 Hari terakhir</button>
+                <button class="date-preset" onclick="setPresetKamp('90')">90 Hari terakhir</button>
+                <button class="date-preset" onclick="setPresetKamp('this_month')">Bulan ini</button>
+                <button class="date-preset" onclick="setPresetKamp('last_month')">Bulan lalu</button>
+                <button class="date-preset" onclick="setPresetKamp('max')">Maksimal (1 tahun)</button>
+              </div>
+              <div class="date-divider"></div>
+              <div class="date-custom">
+                <div class="date-custom-label">Pilih tanggal</div>
+                <div class="date-range-inputs">
+                  <div class="date-field"><label>Dari</label><input type="date" id="date-from-kamp" class="date-input" onchange="setCustomDateKamp()"></div>
+                  <div class="date-sep">→</div>
+                  <div class="date-field"><label>Sampai</label><input type="date" id="date-to-kamp" class="date-input" onchange="setCustomDateKamp()"></div>
+                </div>
+                <div id="date-range-info-kamp" style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)"></div>
+              </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:12px" onclick="applyKampDate()">Terapkan</button>
+            </div>
+          </div>
+        </div>
       <div class="content">
         <div class="metrics" id="kampanye-metrics"></div>
         <div class="table-card" style="margin-top:16px">
@@ -1393,6 +1454,7 @@ function filterAkun() {
 }
 
 async function openKampanye(advId) {
+  currentKampAdvId = advId;
   const adv = ALL_DATA.find(a => a.id === advId);
   if (!adv) return;
 
@@ -1614,6 +1676,103 @@ function initDatePicker() {
   const t = today();
   document.getElementById('date-from').max = t;
   document.getElementById('date-to').max = t;
+}
+
+// ── Date Picker Akun & Kampanye ───────────────────────────────────
+let dateRangeAkun = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' };
+let dateRangeKamp = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' };
+let currentKampAdvId = null;
+
+function buildDateHelper(suffix, rangeObj) {
+  return {
+    toggle() {
+      const dd = document.getElementById('date-dropdown-'+suffix);
+      dd.classList.toggle('open');
+      setTimeout(() => {
+        document.addEventListener('click', function handler(e) {
+          const wrap = document.getElementById('date-picker-wrap-'+suffix);
+          if (wrap && !wrap.contains(e.target)) { dd.classList.remove('open'); document.removeEventListener('click', handler); }
+        });
+      }, 50);
+    },
+    setPreset(preset) {
+      const d = new Date();
+      document.querySelectorAll('#date-dropdown-'+suffix+' .date-preset').forEach(b=>b.classList.remove('active'));
+      event.target.classList.add('active');
+      switch(preset) {
+        case 'today': rangeObj.since=today(); rangeObj.until=today(); rangeObj.label='Hari Ini'; break;
+        case 'yesterday': rangeObj.since=daysAgo(1); rangeObj.until=daysAgo(1); rangeObj.label='Kemarin'; break;
+        case '7': rangeObj.since=daysAgo(7); rangeObj.until=today(); rangeObj.label='7 Hari Terakhir'; break;
+        case '30': rangeObj.since=daysAgo(30); rangeObj.until=today(); rangeObj.label='30 Hari Terakhir'; break;
+        case '90': rangeObj.since=daysAgo(90); rangeObj.until=today(); rangeObj.label='90 Hari Terakhir'; break;
+        case 'this_month': { const s=new Date(d.getFullYear(),d.getMonth(),1); rangeObj.since=fmtDate(s); rangeObj.until=today(); rangeObj.label='Bulan Ini'; break; }
+        case 'last_month': { const s=new Date(d.getFullYear(),d.getMonth()-1,1); const e2=new Date(d.getFullYear(),d.getMonth(),0); rangeObj.since=fmtDate(s); rangeObj.until=fmtDate(e2); rangeObj.label='Bulan Lalu'; break; }
+        case 'max': rangeObj.since=daysAgo(365); rangeObj.until=today(); rangeObj.label='Maksimal (1 Tahun)'; break;
+      }
+      document.getElementById('date-from-'+suffix).value = rangeObj.since;
+      document.getElementById('date-to-'+suffix).value = rangeObj.until;
+      document.getElementById('date-label-'+suffix).textContent = rangeObj.label;
+      document.getElementById('date-range-info-'+suffix).textContent = rangeObj.since+' → '+rangeObj.until;
+    },
+    setCustom() {
+      const from = document.getElementById('date-from-'+suffix).value;
+      const to = document.getElementById('date-to-'+suffix).value;
+      if (!from || !to) return;
+      const diff = Math.round((new Date(to)-new Date(from))/(1000*60*60*24));
+      if (diff < 0) { document.getElementById('date-range-info-'+suffix).textContent='Tanggal akhir harus setelah awal'; return; }
+      if (diff > 365) { document.getElementById('date-range-info-'+suffix).textContent='Maksimal 365 hari'; return; }
+      document.querySelectorAll('#date-dropdown-'+suffix+' .date-preset').forEach(b=>b.classList.remove('active'));
+      rangeObj.since=from; rangeObj.until=to; rangeObj.label=(from===to?from:from+' → '+to);
+      document.getElementById('date-label-'+suffix).textContent = rangeObj.label;
+      document.getElementById('date-range-info-'+suffix).textContent = (diff+1)+' hari dipilih';
+    }
+  };
+}
+
+const akunDateHelper = buildDateHelper('akun', dateRangeAkun);
+const kampDateHelper = buildDateHelper('kamp', dateRangeKamp);
+
+function toggleDatePickerAkun() { akunDateHelper.toggle(); }
+function setPresetAkun(p) { akunDateHelper.setPreset(p); }
+function setCustomDateAkun() { akunDateHelper.setCustom(); }
+function toggleDatePickerKamp() { kampDateHelper.toggle(); }
+function setPresetKamp(p) { kampDateHelper.setPreset(p); }
+function setCustomDateKamp() { kampDateHelper.setCustom(); }
+
+async function applyAkunDate() {
+  document.getElementById('date-dropdown-akun').classList.remove('open');
+  if (!isConnected('meta') || !cachedMetaAccounts) { renderAkun(ALL_DATA); return; }
+  document.getElementById('akun-sub').textContent = 'Memuat ' + dateRangeAkun.label + '...';
+  const token = apiConfig.meta.token;
+  const hasilTypes = ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','lead','onsite_conversion.lead_grouped'];
+  const statusMap = {1:'Aktif',2:'Paused',3:'Ended',7:'Ended'};
+  const metaRows = await Promise.all(cachedMetaAccounts.map(async acc => {
+    try {
+      const r = await fetch(`https://graph.facebook.com/v19.0/${acc.id}/insights?access_token=${token}&fields=spend,clicks,impressions,actions&time_range={"since":"${dateRangeAkun.since}","until":"${dateRangeAkun.until}"}&level=account`);
+      const d = await r.json();
+      const row = d.data?.[0];
+      const spend = parseFloat(row?.spend||0);
+      const imp = parseInt(row?.impressions||0);
+      const clicks = parseInt(row?.clicks||0);
+      const hasilAction = (row?.actions||[]).find(a=>hasilTypes.includes(a.action_type));
+      const leads = parseInt(hasilAction?.value||0);
+      return { id:acc.id, name:acc.name, platform:'meta', status:statusMap[acc.account_status]||'Aktif', spend, imp, clicks, budget:0, ctr:imp>0?+((clicks/imp)*100).toFixed(2):0, roas:0, leads, cpr:leads>0?Math.round(spend/leads):0 };
+    } catch(e) { return { id:acc.id, name:acc.name, platform:'meta', status:'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0, leads:0, cpr:0 }; }
+  }));
+  const nonMeta = ALL_DATA.filter(a=>a.platform!=='meta');
+  ALL_DATA.length=0; nonMeta.forEach(a=>ALL_DATA.push(a)); metaRows.forEach(a=>ALL_DATA.push(a));
+  renderAkun(ALL_DATA);
+  document.getElementById('akun-sub').textContent = dateRangeAkun.label;
+}
+
+async function applyKampDate() {
+  document.getElementById('date-dropdown-kamp').classList.remove('open');
+  if (currentKampAdvId) {
+    dateRange.since = dateRangeKamp.since;
+    dateRange.until = dateRangeKamp.until;
+    dateRange.label = dateRangeKamp.label;
+    await openKampanye(currentKampAdvId);
+  }
 }
 
 // ── Perbaikan: token tersimpan permanen di localStorage ──────────
