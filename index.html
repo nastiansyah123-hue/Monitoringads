@@ -1326,15 +1326,26 @@ const ALL_DATA = [...DUMMY_DATA.map(a=>({...a}))];
 
 // Cache data Meta real ke localStorage agar tidak hilang saat token expired
 function saveMetaCache(rows) {
-  try { localStorage.setItem('admonitor_meta_cache', JSON.stringify({ ts: Date.now(), rows })); } catch(e){}
+  try {
+    localStorage.setItem('admonitor_meta_cache', JSON.stringify({
+      ts: Date.now(),
+      date: today(), // simpan tanggal saat cache dibuat
+      since: dateRange.since,
+      until: dateRange.until,
+      rows
+    }));
+  } catch(e) {}
 }
 function loadMetaCache() {
   try {
     const raw = localStorage.getItem('admonitor_meta_cache');
     if (!raw) return null;
-    const { ts, rows } = JSON.parse(raw);
-    const ageHours = (Date.now() - ts) / 3600000;
-    if (ageHours > 24) return null;
+    const { ts, date, since, until, rows } = JSON.parse(raw);
+    // Invalidate kalau tanggal berbeda atau dateRange berbeda
+    if (date !== today()) return null;
+    if (since !== dateRange.since || until !== dateRange.until) return null;
+    const ageMinutes = (Date.now() - ts) / 60000;
+    if (ageMinutes > 30) return null; // cache max 30 menit
     return rows;
   } catch(e) { return null; }
 }
@@ -2741,6 +2752,18 @@ if (savedDate) {
     }
   } catch(e) {}
 }
+
+// Clear cache kalau tanggal berbeda dari cache tersimpan
+try {
+  const raw = localStorage.getItem('admonitor_meta_cache');
+  if (raw) {
+    const cached = JSON.parse(raw);
+    if (cached.date !== today()) {
+      localStorage.removeItem('admonitor_meta_cache');
+      console.log('Cache cleared — new day');
+    }
+  }
+} catch(e) {}
 
 function saveDateRange() { localStorage.setItem('admonitor_date', JSON.stringify(dateRange)); }
 
