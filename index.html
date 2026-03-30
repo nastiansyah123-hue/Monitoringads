@@ -757,8 +757,11 @@ async function fetchAndRenderMeta(adAccounts) {
   const until = dateRange.until;
   const statusMap = { 1:'Aktif', 2:'Paused', 3:'Ended', 7:'Ended' };
 
-  const metaRows = [];
-  for (const acc of adAccounts) {
+  // Tampilkan loading di header
+  document.getElementById('last-update').textContent = 'Memuat data Meta (' + adAccounts.length + ' akun)...';
+
+  // Fetch semua akun secara paralel (jauh lebih cepat)
+  const metaRows = await Promise.all(adAccounts.map(async acc => {
     try {
       const r = await fetch(`https://graph.facebook.com/v19.0/${acc.id}/insights?access_token=${token}&fields=spend,clicks,impressions,purchase_roas&time_range={"since":"${since}","until":"${until}"}&level=account`);
       const d = await r.json();
@@ -767,30 +770,31 @@ async function fetchAndRenderMeta(adAccounts) {
       const imp = parseInt(row?.impressions || 0);
       const clicks = parseInt(row?.clicks || 0);
       const roas = parseFloat(row?.purchase_roas?.[0]?.value || 0);
-      metaRows.push({
+      return {
         id: acc.id,
         name: acc.name,
         platform: 'meta',
         status: statusMap[acc.account_status] || 'Aktif',
-        spend,
+        spend, imp, budget: 0,
         ctr: imp > 0 ? +((clicks/imp)*100).toFixed(2) : 0,
         roas: +roas.toFixed(2),
-        imp,
-        budget: 0,
-      });
+      };
     } catch(e) {
-      metaRows.push({ id:acc.id, name:acc.name, platform:'meta', status: statusMap[acc.account_status]||'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0 });
+      return { id:acc.id, name:acc.name, platform:'meta', status: statusMap[acc.account_status]||'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0 };
     }
-  }
+  }));
 
-  // Replace dummy meta data dengan data real
+  // Clear data Meta lama, masukkan data baru
   const nonMeta = ALL_DATA.filter(a => a.platform !== 'meta');
   ALL_DATA.length = 0;
   nonMeta.forEach(a => ALL_DATA.push(a));
   metaRows.forEach(a => ALL_DATA.push(a));
+
   updateCounts();
   renderAll();
-  document.getElementById('last-update').textContent = 'Meta: data real · Update: ' + new Date().toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'});
+  document.getElementById('last-update').textContent =
+    'Meta: data real (' + dateRange.label + ') · Update: ' +
+    new Date().toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'});
 }
 
 // Modal
@@ -1120,13 +1124,26 @@ function updateDateInfo() {
   document.getElementById('date-range-info').textContent = diff + ' hari dipilih · ' + from + ' s/d ' + to;
 }
 
+// Cache list akun Meta agar tidak perlu re-fetch tiap ganti tanggal
+let cachedMetaAccounts = null;
+
 function applyDateAndRefresh() {
   document.getElementById('date-dropdown').classList.remove('open');
   saveDateRange();
   if (isConnected('meta') && welcomeSelected.has('meta')) {
-    fetchAllMetaAccounts(apiConfig.meta.token)
-      .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
-      .catch(()=>{});
+    if (cachedMetaAccounts) {
+      // Pakai cache, langsung fetch insights dengan tanggal baru
+      fetchAndRenderMeta(cachedMetaAccounts);
+    } else {
+      fetchAllMetaAccounts(apiConfig.meta.token)
+        .then(accounts => {
+          if(accounts.length) {
+            cachedMetaAccounts = accounts;
+            fetchAndRenderMeta(accounts);
+          }
+        })
+        .catch(()=>{});
+    }
   } else {
     renderAll();
   }
@@ -1199,7 +1216,12 @@ function startDashboard() {
   renderAll();
   if (isConnected('meta') && welcomeSelected.has('meta')) {
     fetchAllMetaAccounts(apiConfig.meta.token)
-      .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
+      .then(accounts => {
+        if(accounts.length) {
+          cachedMetaAccounts = accounts;
+          fetchAndRenderMeta(accounts);
+        }
+      })
       .catch(()=>{});
   }
 }
@@ -1232,7 +1254,12 @@ if (savedPlatforms) {
   renderAll();
   if (isConnected('meta') && welcomeSelected.has('meta')) {
     fetchAllMetaAccounts(apiConfig.meta.token)
-      .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
+      .then(accounts => {
+        if(accounts.length) {
+          cachedMetaAccounts = accounts;
+          fetchAndRenderMeta(accounts);
+        }
+      })
       .catch(()=>{});
   }
 } else {
