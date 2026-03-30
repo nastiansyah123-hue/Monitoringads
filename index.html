@@ -6,6 +6,7 @@
 <title>Advertiser Monitor v2</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 /* Login Screen */
 .login-screen{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;}
@@ -365,10 +366,10 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       <div class="login-logo-name">Ad<span>Monitor</span></div>
     </div>
     <div class="login-title">Selamat datang</div>
-    <div class="login-sub">Masuk untuk mengakses dashboard monitoring advertiser</div>
+    <div class="login-sub">Masuk dengan akun yang sudah didaftarkan admin</div>
     <div class="login-field">
-      <label class="login-label">Username</label>
-      <input class="login-input" type="text" id="login-user" placeholder="Masukkan username" onkeydown="if(event.key==='Enter')doLogin()">
+      <label class="login-label">Email</label>
+      <input class="login-input" type="email" id="login-user" placeholder="email@herbaljaya.com" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="login-field">
       <label class="login-label">Password</label>
@@ -381,6 +382,9 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
     <div class="login-error" id="login-error"></div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Masuk</button>
+    <div id="forgot-wrap" style="text-align:center;margin-top:10px">
+      <button onclick="doForgotPassword()" style="background:none;border:none;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--sans);">Lupa password?</button>
+    </div>
     <div class="login-divider"></div>
     <div class="login-footer">
       AdMonitor · Herbal Jaya &copy; 2025<br>
@@ -943,64 +947,106 @@ if (savedTheme === 'light') {
 }
 
 // ── Auth System ─────────────────────────────────────────────────
-// Daftar user — tambah/hapus sesuai kebutuhan
-// Format: { username, password, name, role }
-const USERS = [
-  { username:'admin', password:'herbal2025', name:'Admin', role:'admin' },
-  { username:'nastiansyah', password:'hj2025!', name:'Nastiansyah', role:'admin' },
-  { username:'viewer', password:'viewonly', name:'Viewer', role:'viewer' },
-];
+// ── Supabase Setup ────────────────────────────────────────────────
+const SUPABASE_URL = 'https://ibokbgpnmwthmbfdvyxt.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlib2tiZ3BubXd0aG1iZmR2eXh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTgwMzQsImV4cCI6MjA5MDQzNDAzNH0.Df-6kvafuO-nQViUX6Tww-F3P9oRQpod9DtVADP88QM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let currentUser = null;
 
-function checkSession() {
-  const saved = localStorage.getItem('admonitor_user');
-  if (saved) {
-    try {
-      currentUser = JSON.parse(saved);
-      return true;
-    } catch(e) { return false; }
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    return true;
   }
   return false;
 }
 
-function doLogin() {
-  const username = document.getElementById('login-user').value.trim();
+async function doLogin() {
+  const email = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
   const errEl = document.getElementById('login-error');
   const btn = document.getElementById('login-btn');
-
-  if (!username || !password) {
-    errEl.textContent = 'Username dan password wajib diisi';
+  if (!email || !password) { errEl.textContent = 'Email dan password wajib diisi'; return; }
+  btn.disabled = true; btn.textContent = 'Memeriksa...';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = error.message === 'Invalid login credentials' ? 'Email atau password salah' : error.message;
+    document.getElementById('login-pass').value = '';
+    btn.disabled = false; btn.textContent = 'Masuk';
     return;
   }
+  currentUser = data.user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('login-error').textContent = '';
+  btn.disabled = false; btn.textContent = 'Masuk';
+  await loadUserConfig();
+  initApp();
+}
 
-  btn.disabled = true;
-  btn.textContent = 'Memeriksa...';
+async function doForgotPassword() {
+  const email = document.getElementById('login-user').value.trim();
+  if (!email) { document.getElementById('login-error').textContent = 'Isi email dulu sebelum reset password'; return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  if (error) { document.getElementById('login-error').textContent = error.message; return; }
+  document.getElementById('login-error').style.color = '#22d3a0';
+  document.getElementById('login-error').textContent = 'Link reset password sudah dikirim ke email kamu!';
+}
 
-  // Simulasi delay kecil agar tidak instant (anti-brute force feel)
-  setTimeout(() => {
-    const user = USERS.find(u => u.username === username && u.password === password);
-    if (user) {
-      currentUser = { username: user.username, name: user.name, role: user.role };
-      localStorage.setItem('admonitor_user', JSON.stringify(currentUser));
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('login-error').textContent = '';
-      initApp();
-    } else {
-      errEl.textContent = 'Username atau password salah';
-      document.getElementById('login-box-inner')?.classList.add('shake');
-      document.getElementById('login-pass').value = '';
-      document.getElementById('login-user').classList.add('error');
-      document.getElementById('login-pass').classList.add('error');
-      setTimeout(()=>{
-        document.getElementById('login-user').classList.remove('error');
-        document.getElementById('login-pass').classList.remove('error');
-      }, 1000);
-    }
-    btn.disabled = false;
-    btn.textContent = 'Masuk';
-  }, 600);
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  document.getElementById('app-layout').style.display = 'none';
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-error').style.color = '';
+  // Reset platform selection
+  welcomeSelected.clear();
+  localStorage.removeItem('admonitor_platforms');
+}
+
+// ── Supabase Config per User ──────────────────────────────────────
+async function loadUserConfig() {
+  if (!currentUser) return;
+  const { data, error } = await sb.from('user_config').select('*').eq('user_id', currentUser.id).single();
+  if (error || !data) return;
+  // Isi apiConfig dari Supabase
+  if (data.meta_token) {
+    apiConfig.meta = { token: data.meta_token, bizId: data.meta_biz_id || '' };
+  }
+  if (data.google_token) {
+    apiConfig.google = { token: data.google_token, mccId: data.google_mcc_id || '' };
+  }
+  if (data.tiktok_token) {
+    apiConfig.tiktok = { token: data.tiktok_token, advId: data.tiktok_adv_id || '' };
+  }
+  // Platform dari Supabase
+  if (data.platforms?.length) {
+    localStorage.setItem('admonitor_platforms', JSON.stringify(data.platforms));
+  }
+  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+}
+
+async function saveUserConfig() {
+  if (!currentUser) { saveConfig(); return; }
+  const cfg = {
+    user_id: currentUser.id,
+    meta_token: apiConfig.meta?.token || null,
+    meta_biz_id: apiConfig.meta?.bizId || null,
+    google_token: apiConfig.google?.token || null,
+    google_mcc_id: apiConfig.google?.mccId || null,
+    tiktok_token: apiConfig.tiktok?.token || null,
+    tiktok_adv_id: apiConfig.tiktok?.advId || null,
+    platforms: [...welcomeSelected],
+    updated_at: new Date().toISOString(),
+  };
+  await sb.from('user_config').upsert(cfg, { onConflict: 'user_id' });
+  // Simpan juga ke localStorage sebagai cache
+  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
 }
 
 function togglePass() {
@@ -1015,26 +1061,15 @@ function togglePass() {
   }
 }
 
-function doLogout() {
-  localStorage.removeItem('admonitor_user');
-  currentUser = null;
-  // Reset semua view
-  document.getElementById('app-layout').style.display = 'none';
-  document.getElementById('welcome-screen').classList.add('hidden');
-  document.getElementById('login-screen').classList.remove('hidden');
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
-  document.getElementById('login-error').textContent = '';
-}
-
 function initApp() {
-  // Update nama user di sidebar
   const nameEl = document.querySelector('.avatar-info p');
   const roleEl = document.querySelector('.avatar-info span');
   const avatarEl = document.querySelector('.avatar');
-  if (nameEl) nameEl.textContent = currentUser.name;
-  if (roleEl) roleEl.textContent = currentUser.role === 'admin' ? 'Admin' : 'Viewer';
-  if (avatarEl) avatarEl.textContent = currentUser.name.slice(0,2).toUpperCase();
+  const email = currentUser?.email || '';
+  const name = email.split('@')[0];
+  if (nameEl) nameEl.textContent = name;
+  if (roleEl) roleEl.textContent = currentUser?.user_metadata?.role || 'User';
+  if (avatarEl) avatarEl.textContent = name.slice(0,2).toUpperCase();
 
   // Cek apakah sudah pernah pilih platform
   const savedPlatforms = localStorage.getItem('admonitor_platforms');
@@ -1145,7 +1180,22 @@ function showTokenAlert(isExpired) {
 let currentPlatform = 'all';
 let currentFilter = 'all';
 let charts = {};
+// ── Default config (token hardcoded, override localStorage) ──────
+const DEFAULT_META_TOKEN = 'PASTE_TOKEN_DISINI'; // Ganti dengan token kamu
+const DEFAULT_META_PLATFORMS = ['meta'];          // Platform default
+
 let apiConfig = JSON.parse(localStorage.getItem('admonitor_config') || '{}');
+
+// Jika token belum ada di localStorage, pakai default
+if (!apiConfig.meta?.token && DEFAULT_META_TOKEN !== 'PASTE_TOKEN_DISINI') {
+  apiConfig.meta = { token: DEFAULT_META_TOKEN, bizId: '' };
+  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+}
+
+// Jika platform belum dipilih, set default
+if (!localStorage.getItem('admonitor_platforms') && DEFAULT_META_TOKEN !== 'PASTE_TOKEN_DISINI') {
+  localStorage.setItem('admonitor_platforms', JSON.stringify(DEFAULT_META_PLATFORMS));
+}
 let apiPanelOpen = false;
 let currentModal = null;
 
@@ -1215,6 +1265,7 @@ function saveConfig() {
     tiktok: { token: document.getElementById('cfg-tiktok-token').value, advId: document.getElementById('cfg-tiktok-adv').value },
   };
   localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+  saveUserConfig(); // Sync ke Supabase
   updateConnectionStatus();
 }
 
@@ -2254,19 +2305,29 @@ function applyPlatformSelection() {
   }
 }
 
-// ── Init: cek session login dulu ─────────────────────────────────
-if (checkSession()) {
-  // Sudah login — langsung initApp
-  document.getElementById('login-screen').classList.add('hidden');
-  initApp();
-} else {
-  // Belum login — tampilkan login screen
-  document.getElementById('login-screen').classList.remove('hidden');
-  document.getElementById('welcome-screen').classList.add('hidden');
-  document.getElementById('app-layout').style.display = 'none';
-  // Fokus ke input username
-  setTimeout(() => document.getElementById('login-user').focus(), 100);
-}
+// ── Init: cek session Supabase ────────────────────────────────────
+(async () => {
+  const loggedIn = await checkSession();
+  if (loggedIn) {
+    document.getElementById('login-screen').classList.add('hidden');
+    await loadUserConfig();
+    initApp();
+  } else {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('welcome-screen').classList.add('hidden');
+    document.getElementById('app-layout').style.display = 'none';
+    setTimeout(() => document.getElementById('login-user')?.focus(), 100);
+  }
+
+  // Listen auth state changes (auto re-login setelah refresh)
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+    }
+  });
+})();
 </script>
 <!-- Mobile Bottom Nav -->
 <div class="mobile-nav">
