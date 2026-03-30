@@ -672,7 +672,7 @@ tr:hover td{background:rgba(255,255,255,0.015);}
                 <tr>
                   <th style="width:35%">Nama Kampanye</th>
                   <th style="width:15%">Spend</th>
-                  <th style="width:10%">Lead</th>
+                  <th style="width:10%">Hasil</th>
                   <th style="width:12%">CPR</th>
                   <th style="width:12%">Impresi</th>
                   <th style="width:10%">Status</th>
@@ -1016,18 +1016,19 @@ async function fetchAndRenderMeta(adAccounts) {
 
       // Ambil jumlah lead dari actions
       const actions = row?.actions || [];
-      
-      // Debug: log semua action types ke console
-      if (actions.length > 0) {
-        console.log(`[${acc.name}] Actions:`, actions.map(a => `${a.action_type}=${a.value}`).join(', '));
-      } else {
-        console.log(`[${acc.name}] Tidak ada actions`);
-      }
 
-      // Coba semua kemungkinan action_type untuk lead
-      const leadTypes = ['lead','onsite_conversion.lead_grouped','onsite_conversion.messaging_first_reply','offsite_conversion.fb_pixel_lead','contact_total'];
-      const leadAction = actions.find(a => leadTypes.includes(a.action_type));
-      const leads = parseInt(leadAction?.value || 0);
+      // Ambil hasil utama: chat/pesan masuk (sesuai tipe kampanye Herbal Jaya)
+      const hasilTypes = [
+        'onsite_conversion.messaging_first_reply',      // Pesan pertama masuk
+        'onsite_conversion.messaging_conversation_started_7d', // Percakapan dimulai
+        'lead',                                          // Form lead
+        'onsite_conversion.lead_grouped',               // Lead grouped
+        'offsite_conversion.fb_pixel_lead',             // Pixel lead
+        'contact_total',                                // Total kontak
+      ];
+      const hasilAction = actions.find(a => hasilTypes.includes(a.action_type));
+      const leads = parseInt(hasilAction?.value || 0);
+      const hasilType = hasilAction?.action_type || '';
       const cpr = leads > 0 ? Math.round(spend / leads) : 0;
 
       return {
@@ -1365,7 +1366,7 @@ function renderAkun(data) {
               <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtRp(a.spend)}</div>
             </div>
             <div style="background:var(--surface2);border-radius:6px;padding:8px">
-              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">Lead</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">Hasil</div>
               <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0).toLocaleString('id-ID')}</div>
             </div>
             <div style="background:var(--surface2);border-radius:6px;padding:8px">
@@ -1433,8 +1434,9 @@ async function fetchKampanyeMeta(adv) {
         const di = await ri.json();
         const row = di.data?.[0];
         const actions = row?.actions || [];
-        const leadAction = actions.find(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
-        const leads = parseInt(leadAction?.value || 0);
+        const hasilTypes = ['onsite_conversion.messaging_first_reply','onsite_conversion.messaging_conversation_started_7d','lead','onsite_conversion.lead_grouped','offsite_conversion.fb_pixel_lead','contact_total'];
+        const hasilAction = actions.find(a => hasilTypes.includes(a.action_type));
+        const leads = parseInt(hasilAction?.value || 0);
         return {
           ...c,
           spend: parseFloat(row?.spend || 0),
@@ -1462,7 +1464,7 @@ function renderKampanye(campaigns, adv) {
   document.getElementById('kampanye-metrics').innerHTML = `
     <div class="mc"><div class="mc-label">Total Kampanye</div><div class="mc-val">${campaigns.length}</div></div>
     <div class="mc"><div class="mc-label">Total Spend</div><div class="mc-val">${fmtRp(totalSpend)}</div></div>
-    <div class="mc"><div class="mc-label">Total Lead</div><div class="mc-val">${campaigns.reduce((s,c)=>s+(c.leads||0),0).toLocaleString('id-ID')}</div></div>
+    <div class="mc"><div class="mc-label">Total Hasil</div><div class="mc-val">${campaigns.reduce((s,c)=>s+(c.leads||0),0).toLocaleString('id-ID')}</div></div>
     <div class="mc"><div class="mc-label">Avg CPR</div><div class="mc-val">${totalSpend>0&&campaigns.reduce((s,c)=>s+(c.leads||0),0)>0?fmtRp(Math.round(totalSpend/campaigns.reduce((s,c)=>s+(c.leads||0),0))):'–'}</div></div>
   `;
 
