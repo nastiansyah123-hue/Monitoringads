@@ -1807,30 +1807,36 @@ function toggleEditLimit(id) {
   edit.style.display = isOpen ? 'none' : 'block';
 }
 
-async function saveManualLimit(id) {
-  const input = document.getElementById('limit-input-'+id);
-  const val = parseFloat(input.value.replace(/\D/g,''));
-  if (!val || val <= 0) { alert('Masukkan angka yang valid'); return; }
-  manualLimits[id] = val;
+async function saveManualLimit(id, currentSpend) {
+  const limitVal = parseFloat(document.getElementById('limit-input-'+id)?.value || 0);
+  const saldoVal = parseFloat(document.getElementById('saldo-input-'+id)?.value || 0);
+  if (!limitVal || limitVal <= 0) { alert('Limit akun wajib diisi'); return; }
+  manualLimits[id] = { limit: limitVal, saldoAwal: saldoVal, spendSaatSet: currentSpend };
   localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
-  // Simpan ke Supabase jika login
   if (currentUser) {
     await sb.from('account_limits').upsert({
       user_id: currentUser.id,
       account_id: id,
-      limit_amount: val,
+      limit_amount: limitVal,
+      saldo_awal: saldoVal,
+      spend_saat_set: currentSpend,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,account_id' }).catch(()=>{});
   }
-  // Re-render kartu akun
   renderAkun(ALL_DATA);
 }
 
 async function loadManualLimits() {
   if (!currentUser) return;
-  const { data } = await sb.from('account_limits').select('account_id,limit_amount').eq('user_id', currentUser.id).catch(()=>({data:null}));
+  const { data } = await sb.from('account_limits').select('account_id,limit_amount,saldo_awal,spend_saat_set').eq('user_id', currentUser.id).catch(()=>({data:null}));
   if (data?.length) {
-    data.forEach(r => { manualLimits[r.account_id] = r.limit_amount; });
+    data.forEach(r => {
+      manualLimits[r.account_id] = {
+        limit: r.limit_amount,
+        saldoAwal: r.saldo_awal || 0,
+        spendSaatSet: r.spend_saat_set || 0
+      };
+    });
     localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
   }
 }
@@ -2011,25 +2017,30 @@ function renderAkun(data) {
           <!-- Budget Manual -->
           <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <span style="font-size:10px;font-weight:500;color:var(--text2)">Limit Akun</span>
-              <button onclick="toggleEditLimit('${a.id}')" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans)">Edit</button>
+              <span style="font-size:10px;font-weight:500;color:var(--text2)">Monitoring Tagihan</span>
+              <button onclick="toggleEditLimit('${a.id}')" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans)" id="edit-btn-${a.id}">Edit</button>
             </div>
             <div id="limit-display-${a.id}">
               ${(() => {
-                const limit = manualLimits[a.id] || 0;
-                const spent = a.amountSpentRp || a.spend || 0;
-                const sisa = Math.max(0, limit - spent);
-                const pct = limit > 0 ? Math.min(100, Math.round(spent/limit*100)) : 0;
+                const cfg = manualLimits[a.id] || {};
+                const limit = cfg.limit || 0;
+                const saldoAwal = cfg.saldoAwal || 0;
+                const spendAPI = a.amountSpentRp || a.spend || 0;
+                // Saldo tertunggak = saldo awal + spend dari API sejak saldo diset
+                const spendSejak = cfg.spendSaatSet != null ? Math.max(0, spendAPI - cfg.spendSaatSet) : 0;
+                const saldoTertunggak = saldoAwal + spendSejak;
+                const sisa = Math.max(0, limit - saldoTertunggak);
+                const pct = limit > 0 ? Math.min(100, Math.round(saldoTertunggak/limit*100)) : 0;
                 const col = pct>=90?'#f75c5c':pct>=70?'#f5a623':'#22d3a0';
                 return limit > 0 ? `
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
                     <div>
-                      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Limit</div>
-                      <div style="font-size:13px;font-weight:500;font-family:var(--mono);color:var(--text)">${fmtRp(limit)}</div>
+                      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Limit Akun</div>
+                      <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtRp(limit)}</div>
                     </div>
                     <div>
-                      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Sudah Spend</div>
-                      <div style="font-size:13px;font-weight:500;font-family:var(--mono);color:${col}">${fmtRp(spent)}</div>
+                      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Saldo Tertunggak</div>
+                      <div style="font-size:13px;font-weight:500;font-family:var(--mono);color:${col}">${fmtRp(saldoTertunggak)}</div>
                     </div>
                   </div>
                   <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:5px">
@@ -2039,16 +2050,23 @@ function renderAkun(data) {
                     <span style="color:var(--text2)">Sisa: <span style="color:${col};font-weight:500">${fmtRp(sisa)}</span></span>
                     <span style="color:var(--text3)">${pct}% terpakai</span>
                   </div>
+                  ${spendSejak > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:3px">+${fmtRp(spendSejak)} spend sejak saldo diset</div>` : ''}
                 ` : `<div style="font-size:11px;color:var(--text3)">Belum diset — klik Edit</div>`;
               })()}
             </div>
-            <div id="limit-edit-${a.id}" style="display:none;margin-top:6px">
-              <div style="display:flex;gap:6px;align-items:center">
-                <input type="number" id="limit-input-${a.id}" placeholder="Contoh: 772664" value="${manualLimits[a.id]||''}"
-                  style="font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--text);flex:1;min-width:0">
-                <button onclick="saveManualLimit('${a.id}')" style="font-size:11px;padding:6px 12px;border-radius:6px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);flex-shrink:0">Simpan</button>
+            <div id="limit-edit-${a.id}" style="display:none;margin-top:8px">
+              <div style="margin-bottom:8px">
+                <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Limit Akun (Jangkauan Saldo)</div>
+                <input type="number" id="limit-input-${a.id}" placeholder="Contoh: 772664" value="${(manualLimits[a.id]?.limit)||''}"
+                  style="font-family:var(--mono);font-size:12px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:100%">
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:4px">Input dalam Rupiah. Contoh: 772664 = Rp772.664</div>
+              <div style="margin-bottom:8px">
+                <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Saldo Tertunggak Saat Ini</div>
+                <input type="number" id="saldo-input-${a.id}" placeholder="Contoh: 284499" value="${(manualLimits[a.id]?.saldoAwal)||''}"
+                  style="font-family:var(--mono);font-size:12px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:100%">
+                <div style="font-size:10px;color:var(--text3);margin-top:3px">Lihat di Meta Ads Manager → Billing → Saldo saat ini</div>
+              </div>
+              <button onclick="saveManualLimit('${a.id}', ${a.amountSpentRp||a.spend||0})" style="width:100%;font-size:12px;padding:8px;border-radius:7px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-weight:500">Simpan</button>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:10px;gap:6px">
