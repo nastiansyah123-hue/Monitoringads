@@ -7,6 +7,33 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
+/* Login Screen */
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-screen.hidden{display:none;}
+.login-box{width:100%;max-width:380px;}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:40px;}
+.login-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.login-logo-icon svg{width:22px;height:22px;fill:white;}
+.login-logo-name{font-size:18px;font-weight:600;letter-spacing:-0.02em;}
+.login-logo-name span{color:#4f8ef7;}
+.login-title{font-size:24px;font-weight:600;letter-spacing:-0.03em;margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:32px;}
+.login-field{margin-bottom:14px;}
+.login-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:block;}
+.login-input{font-family:var(--sans);font-size:13px;padding:11px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:100%;transition:border-color .15s;}
+.login-input:focus{outline:none;border-color:rgba(79,142,247,0.5);background:var(--surface2);}
+.login-input.error{border-color:rgba(247,92,92,0.5);}
+.login-btn{width:100%;font-family:var(--sans);font-size:14px;font-weight:500;padding:12px;border-radius:10px;background:#4f8ef7;border:none;color:white;cursor:pointer;transition:all .15s;margin-top:8px;}
+.login-btn:hover{background:#3d7ef0;}
+.login-btn:active{transform:scale(0.99);}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.login-error{font-size:12px;color:#f75c5c;margin-top:10px;text-align:center;min-height:18px;}
+.login-hint{font-size:11px;color:var(--text3);text-align:center;margin-top:20px;line-height:1.6;}
+.login-divider{height:1px;background:var(--border);margin:24px 0;}
+.login-footer{font-size:11px;color:var(--text3);text-align:center;}
+.shake{animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
 /* Welcome Screen */
 .welcome-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;}
 .welcome-screen.hidden{display:none;}
@@ -236,6 +263,38 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 </style>
 </head>
 <body>
+<!-- Login Screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg></div>
+      <div class="login-logo-name">Ad<span>Monitor</span></div>
+    </div>
+    <div class="login-title">Selamat datang</div>
+    <div class="login-sub">Masuk untuk mengakses dashboard monitoring advertiser</div>
+    <div class="login-field">
+      <label class="login-label">Username</label>
+      <input class="login-input" type="text" id="login-user" placeholder="Masukkan username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Password</label>
+      <div style="position:relative">
+        <input class="login-input" type="password" id="login-pass" placeholder="Masukkan password" onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="togglePass()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);padding:0">
+          <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Masuk</button>
+    <div class="login-divider"></div>
+    <div class="login-footer">
+      AdMonitor · Herbal Jaya &copy; 2025<br>
+      <span style="color:var(--text3)">Hubungi admin untuk mendapatkan akses</span>
+    </div>
+  </div>
+</div>
+
 <!-- Welcome / Platform Picker Screen -->
 <div class="welcome-screen" id="welcome-screen">
   <div class="welcome-box">
@@ -297,18 +356,24 @@ tr:hover td{background:rgba(255,255,255,0.015);}
     </div>
     <div class="nav-section">
       <div class="nav-label">Utama</div>
-      <button class="nav-item active">
+      <button class="nav-item active" id="nav-dashboard" onclick="showView('dashboard')">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
         Dashboard
       </button>
-      <button class="nav-item">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-        Advertiser
+      <button class="nav-item" id="nav-akun" onclick="showView('akun')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+        Akun
+        <span id="nav-akun-count" style="margin-left:auto;font-size:10px;padding:1px 7px;border-radius:100px;background:rgba(79,142,247,0.15);color:#4f8ef7;font-family:var(--mono)"></span>
       </button>
-      <button class="nav-item">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
-        Kampanye
-      </button>
+
+      <!-- Sub-menu Kampanye, muncul saat Akun dipilih -->
+      <div id="nav-kampanye-wrap" style="display:none">
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 10px 4px 28px;">
+          <div style="width:1px;height:14px;background:var(--border2)"></div>
+          <span style="font-size:10px;color:var(--text3)">Kampanye</span>
+        </div>
+        <div id="nav-kampanye-list" style="padding:0 8px 4px 28px;display:flex;flex-direction:column;gap:2px;"></div>
+      </div>
     </div>
     <div class="nav-section">
       <div class="nav-label">Integrasi</div>
@@ -336,6 +401,9 @@ tr:hover td{background:rgba(255,255,255,0.015);}
       <div class="avatar-row">
         <div class="avatar">HJ</div>
         <div class="avatar-info"><p>Herbal Jaya</p><span>Admin</span></div>
+        <button onclick="doLogout()" title="Keluar" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:6px;display:flex;align-items:center;" onmouseover="this.style.color='var(--red-text)'" onmouseout="this.style.color='var(--text3)'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+        </button>
       </div>
     </div>
   </aside>
@@ -569,6 +637,58 @@ tr:hover td{background:rgba(255,255,255,0.015);}
   </div>
 </div><!-- /app-layout -->
 
+<!-- View: Akun -->
+<div id="view-akun" style="display:none;flex:1;overflow-x:hidden;">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Akun</h1>
+      <p id="akun-sub">Klik akun untuk lihat kampanye</p>
+    </div>
+    <div class="header-actions">
+      <input class="search" type="text" id="search-akun" placeholder="Cari akun..." oninput="filterAkun()" style="width:220px">
+    </div>
+  </div>
+  <div class="content">
+    <div id="akun-list"></div>
+  </div>
+</div>
+
+<!-- View: Kampanye per Akun -->
+<div id="view-kampanye" style="display:none;flex:1;overflow-x:hidden;">
+  <div class="page-header">
+    <div class="page-title">
+      <button style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:12px;font-family:var(--sans);display:flex;align-items:center;gap:5px;margin-bottom:4px;padding:0" onclick="showView('akun')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Kembali ke Akun
+      </button>
+      <h1 id="kampanye-title">Kampanye</h1>
+      <p id="kampanye-sub"></p>
+    </div>
+  </div>
+  <div class="content">
+    <div class="metrics" id="kampanye-metrics"></div>
+    <div class="table-card" style="margin-top:16px">
+      <div class="card-head"><div class="card-title">Daftar kampanye</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:35%">Nama Kampanye</th>
+              <th style="width:15%">Spend</th>
+              <th style="width:10%">CTR</th>
+              <th style="width:10%">ROAS</th>
+              <th style="width:12%">Impresi</th>
+              <th style="width:10%">Status</th>
+              <th style="width:8%">Klik</th>
+            </tr>
+          </thead>
+          <tbody id="kampanye-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Setup Modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" id="modal-box">
@@ -588,6 +708,132 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 </div>
 
 <script>
+// ── Auth System ───────────────────────────────────────────────────
+// Daftar user — tambah/hapus sesuai kebutuhan
+// Format: { username, password, name, role }
+const USERS = [
+  { username:'admin', password:'herbal2025', name:'Admin', role:'admin' },
+  { username:'nastiansyah', password:'hj2025!', name:'Nastiansyah', role:'admin' },
+  { username:'viewer', password:'viewonly', name:'Viewer', role:'viewer' },
+];
+
+let currentUser = null;
+
+function checkSession() {
+  const saved = localStorage.getItem('admonitor_user');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      return true;
+    } catch(e) { return false; }
+  }
+  return false;
+}
+
+function doLogin() {
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+
+  if (!username || !password) {
+    errEl.textContent = 'Username dan password wajib diisi';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Memeriksa...';
+
+  // Simulasi delay kecil agar tidak instant (anti-brute force feel)
+  setTimeout(() => {
+    const user = USERS.find(u => u.username === username && u.password === password);
+    if (user) {
+      currentUser = { username: user.username, name: user.name, role: user.role };
+      localStorage.setItem('admonitor_user', JSON.stringify(currentUser));
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('login-error').textContent = '';
+      initApp();
+    } else {
+      errEl.textContent = 'Username atau password salah';
+      document.getElementById('login-box-inner')?.classList.add('shake');
+      document.getElementById('login-pass').value = '';
+      document.getElementById('login-user').classList.add('error');
+      document.getElementById('login-pass').classList.add('error');
+      setTimeout(()=>{
+        document.getElementById('login-user').classList.remove('error');
+        document.getElementById('login-pass').classList.remove('error');
+      }, 1000);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }, 600);
+}
+
+function togglePass() {
+  const input = document.getElementById('login-pass');
+  const icon = document.getElementById('eye-icon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.innerHTML = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+  } else {
+    input.type = 'password';
+    icon.innerHTML = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('admonitor_user');
+  currentUser = null;
+  // Reset semua view
+  document.getElementById('app-layout').style.display = 'none';
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+
+function initApp() {
+  // Update nama user di sidebar
+  const nameEl = document.querySelector('.avatar-info p');
+  const roleEl = document.querySelector('.avatar-info span');
+  const avatarEl = document.querySelector('.avatar');
+  if (nameEl) nameEl.textContent = currentUser.name;
+  if (roleEl) roleEl.textContent = currentUser.role === 'admin' ? 'Admin' : 'Viewer';
+  if (avatarEl) avatarEl.textContent = currentUser.name.slice(0,2).toUpperCase();
+
+  // Cek apakah sudah pernah pilih platform
+  const savedPlatforms = localStorage.getItem('admonitor_platforms');
+  if (savedPlatforms) {
+    const parsed = JSON.parse(savedPlatforms);
+    parsed.forEach(p => welcomeSelected.add(p));
+    document.getElementById('welcome-screen').classList.add('hidden');
+    document.getElementById('app-layout').style.display = 'flex';
+    applyPlatformSelection();
+    loadConfigToInputs();
+    updateConnectionStatus();
+    updateCounts();
+    initDatePicker();
+    renderAll();
+    if (isConnected('meta') && welcomeSelected.has('meta')) {
+      fetchAllMetaAccounts(apiConfig.meta.token)
+        .then(accounts => { if(accounts.length) { cachedMetaAccounts = accounts; fetchAndRenderMeta(accounts); }})
+        .catch(()=>{});
+    }
+  } else {
+    // Tampilkan welcome screen
+    document.getElementById('welcome-screen').classList.remove('hidden');
+    ['meta','google','tiktok'].forEach(p => {
+      const el = document.getElementById('wp-'+p+'-conn');
+      if (el) {
+        const conn = isConnected(p);
+        el.textContent = conn ? 'Token tersimpan ✓' : 'Belum terhubung';
+        el.className = 'wp-conn ' + (conn ? 'yes' : 'no');
+      }
+    });
+  }
+}
+
 const PLATFORMS = {
   meta: { label:'Meta Ads', color:'#1877F2', textColor:'#60a5fa', bg:'rgba(24,119,242,0.12)' },
   google: { label:'Google Ads', color:'#EA4335', textColor:'#f87171', bg:'rgba(234,67,53,0.12)' },
@@ -1008,10 +1254,14 @@ function setFilter(el, f) {
 function filterTable() { renderTable(getFiltered()); }
 
 function updateCounts() {
-  document.getElementById('cnt-all').textContent = ALL_DATA.length;
+  const cntAll = document.getElementById('cnt-all');
+  if (cntAll) cntAll.textContent = ALL_DATA.length;
   ['meta','google','tiktok'].forEach(p=>{
-    document.getElementById('cnt-'+p).textContent = ALL_DATA.filter(a=>a.platform===p).length;
+    const el = document.getElementById('cnt-'+p);
+    if (el) el.textContent = ALL_DATA.filter(a=>a.platform===p).length;
   });
+  const akunBadge = document.getElementById('nav-akun-count');
+  if (akunBadge) akunBadge.textContent = ALL_DATA.length || '';
 }
 
 function renderAll() {
@@ -1042,6 +1292,182 @@ function backToWelcome() {
   updateWelcomeHint();
   document.getElementById('app-layout').style.display = 'none';
   document.getElementById('welcome-screen').classList.remove('hidden');
+}
+
+// ── View switching ────────────────────────────────────────────────
+function showView(view) {
+  // Sembunyikan semua view
+  document.getElementById('main-view').style.display = 'none';
+  document.getElementById('view-akun').style.display = 'none';
+  document.getElementById('view-kampanye').style.display = 'none';
+
+  // Update nav active
+  ['dashboard','akun'].forEach(v => {
+    const el = document.getElementById('nav-'+v);
+    if (el) el.classList.remove('active');
+  });
+
+  if (view === 'dashboard') {
+    document.getElementById('main-view').style.display = 'block';
+    document.getElementById('nav-dashboard').classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
+  } else if (view === 'akun') {
+    document.getElementById('view-akun').style.display = 'flex';
+    document.getElementById('nav-akun').classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
+    renderAkun(ALL_DATA);
+  } else if (view === 'kampanye') {
+    document.getElementById('view-kampanye').style.display = 'flex';
+  }
+}
+
+function renderAkun(data) {
+  const wrap = document.getElementById('akun-list');
+  if (!data.length) { wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Tidak ada akun</div>'; return; }
+
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      ${data.map(a => `
+        <div class="card" style="cursor:pointer;transition:all .2s" onclick="openKampanye('${a.id}')"
+          onmouseover="this.style.borderColor='var(--border2)';this.style.transform='translateY(-1px)'"
+          onmouseout="this.style.borderColor='';this.style.transform=''">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <div style="font-size:14px;font-weight:500">${a.name}</div>
+              <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">${a.id}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+              <span class="badge badge-${a.platform}">${a.platform==='meta'?'Meta':a.platform==='google'?'Google':'TikTok'}</span>
+              <span class="badge badge-${a.status.toLowerCase()}">${a.status}</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <div style="background:var(--surface2);border-radius:6px;padding:8px">
+              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">Spend</div>
+              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtRp(a.spend)}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:8px">
+              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">CTR</div>
+              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${a.ctr.toFixed(1)}%</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:8px">
+              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">ROAS</div>
+              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${a.roas.toFixed(1)}x</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:10px;gap:6px">
+            <span style="font-size:11px;color:var(--text2)">Lihat kampanye</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--text2)"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Update count di sidebar
+  document.getElementById('nav-akun-count').textContent = data.length;
+}
+
+function filterAkun() {
+  const q = document.getElementById('search-akun').value.toLowerCase();
+  const filtered = ALL_DATA.filter(a => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q));
+  renderAkun(filtered);
+}
+
+async function openKampanye(advId) {
+  const adv = ALL_DATA.find(a => a.id === advId);
+  if (!adv) return;
+
+  showView('kampanye');
+  document.getElementById('kampanye-title').textContent = adv.name;
+  document.getElementById('kampanye-sub').textContent = adv.id + ' · ' + (adv.platform === 'meta' ? 'Meta Ads' : adv.platform === 'google' ? 'Google Ads' : 'TikTok Ads');
+  document.getElementById('kampanye-body').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text2)">Memuat kampanye...</td></tr>';
+  document.getElementById('kampanye-metrics').innerHTML = '';
+
+  // Update sidebar kampanye list
+  document.getElementById('nav-kampanye-wrap').style.display = 'block';
+  document.getElementById('nav-kampanye-list').innerHTML = `
+    <div style="font-size:11px;color:#4f8ef7;padding:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${adv.name}</div>
+  `;
+
+  if (adv.platform === 'meta' && isConnected('meta')) {
+    await fetchKampanyeMeta(adv);
+  } else {
+    renderKampanyeDummy(adv);
+  }
+}
+
+async function fetchKampanyeMeta(adv) {
+  const token = apiConfig.meta.token;
+  const since = dateRange.since;
+  const until = dateRange.until;
+
+  try {
+    const r = await fetch(`https://graph.facebook.com/v19.0/${adv.id}/campaigns?access_token=${token}&fields=id,name,status,objective&limit=50`);
+    const d = await r.json();
+    if (d.error || !d.data) { renderKampanyaDummy(adv); return; }
+
+    const campaigns = d.data;
+    // Fetch insights per kampanye secara paralel
+    const withInsights = await Promise.all(campaigns.map(async c => {
+      try {
+        const ri = await fetch(`https://graph.facebook.com/v19.0/${c.id}/insights?access_token=${token}&fields=spend,clicks,impressions,purchase_roas,ctr&time_range={"since":"${since}","until":"${until}"}`);
+        const di = await ri.json();
+        const row = di.data?.[0];
+        return {
+          ...c,
+          spend: parseFloat(row?.spend || 0),
+          clicks: parseInt(row?.clicks || 0),
+          imp: parseInt(row?.impressions || 0),
+          ctr: parseFloat(row?.ctr || 0),
+          roas: parseFloat(row?.purchase_roas?.[0]?.value || 0),
+        };
+      } catch(e) { return { ...c, spend:0, clicks:0, imp:0, ctr:0, roas:0 }; }
+    }));
+
+    renderKampanye(withInsights, adv);
+  } catch(e) {
+    renderKampanyaDummy(adv);
+  }
+}
+
+function renderKampanye(campaigns, adv) {
+  const totalSpend = campaigns.reduce((s,c)=>s+c.spend,0);
+  const avgCtr = campaigns.length ? campaigns.reduce((s,c)=>s+c.ctr,0)/campaigns.length : 0;
+  const avgRoas = campaigns.length ? campaigns.reduce((s,c)=>s+c.roas,0)/campaigns.length : 0;
+  const totalImp = campaigns.reduce((s,c)=>s+c.imp,0);
+
+  document.getElementById('kampanye-metrics').innerHTML = `
+    <div class="mc"><div class="mc-label">Total Kampanye</div><div class="mc-val">${campaigns.length}</div></div>
+    <div class="mc"><div class="mc-label">Total Spend</div><div class="mc-val">${fmtRp(totalSpend)}</div></div>
+    <div class="mc"><div class="mc-label">Avg CTR</div><div class="mc-val">${avgCtr.toFixed(1)}%</div></div>
+    <div class="mc"><div class="mc-label">Avg ROAS</div><div class="mc-val">${avgRoas.toFixed(1)}x</div></div>
+  `;
+
+  const statusColor = s => s === 'ACTIVE' ? 'badge-active' : s === 'PAUSED' ? 'badge-paused' : 'badge-ended';
+  const statusLabel = s => s === 'ACTIVE' ? 'Aktif' : s === 'PAUSED' ? 'Paused' : 'Ended';
+
+  document.getElementById('kampanye-body').innerHTML = campaigns.map(c => `
+    <tr>
+      <td><div style="font-size:12px;font-weight:500">${c.name}</div><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${c.objective||''}</div></td>
+      <td class="num">${fmtRp(c.spend)}</td>
+      <td class="num">${c.ctr.toFixed(1)}%</td>
+      <td class="num">${c.roas.toFixed(1)}x</td>
+      <td class="num">${fmtImp(c.imp)}</td>
+      <td><span class="badge ${statusColor(c.status)}">${statusLabel(c.status)}</span></td>
+      <td class="num">${fmtImp(c.clicks)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2)">Tidak ada kampanye ditemukan</td></tr>';
+}
+
+function renderKampanyaDummy(adv) {
+  const dummy = [
+    { name:'Brand Awareness', objective:'BRAND_AWARENESS', status:'ACTIVE', spend:adv.spend*0.35, ctr:adv.ctr*1.1, roas:adv.roas*1.2, imp:adv.imp*0.4, clicks:Math.round(adv.imp*0.4*adv.ctr/100) },
+    { name:'Performance Max', objective:'CONVERSIONS', status:'ACTIVE', spend:adv.spend*0.28, ctr:adv.ctr*0.95, roas:adv.roas*0.9, imp:adv.imp*0.3, clicks:Math.round(adv.imp*0.3*adv.ctr/100) },
+    { name:'Remarketing', objective:'RETARGETING', status:'ACTIVE', spend:adv.spend*0.22, ctr:adv.ctr*1.3, roas:adv.roas*1.4, imp:adv.imp*0.2, clicks:Math.round(adv.imp*0.2*adv.ctr/100) },
+    { name:'Discovery Ads', objective:'REACH', status:'PAUSED', spend:adv.spend*0.15, ctr:adv.ctr*0.8, roas:adv.roas*0.75, imp:adv.imp*0.1, clicks:Math.round(adv.imp*0.1*adv.ctr/100) },
+  ];
+  renderKampanye(dummy, adv);
 }
 
 // ── Date Range ────────────────────────────────────────────────────
@@ -1238,43 +1664,19 @@ function applyPlatformSelection() {
   }
 }
 
-// Cek apakah sudah pernah pilih platform sebelumnya
-const savedPlatforms = localStorage.getItem('admonitor_platforms');
-if (savedPlatforms) {
-  const parsed = JSON.parse(savedPlatforms);
-  parsed.forEach(p => welcomeSelected.add(p));
-  // Langsung masuk dashboard
-  document.getElementById('welcome-screen').classList.add('hidden');
-  document.getElementById('app-layout').style.display = 'flex';
-  applyPlatformSelection();
-  loadConfigToInputs();
-  updateConnectionStatus();
-  updateCounts();
-  initDatePicker();
-  renderAll();
-  if (isConnected('meta') && welcomeSelected.has('meta')) {
-    fetchAllMetaAccounts(apiConfig.meta.token)
-      .then(accounts => {
-        if(accounts.length) {
-          cachedMetaAccounts = accounts;
-          fetchAndRenderMeta(accounts);
-        }
-      })
-      .catch(()=>{});
-  }
+// ── Init: cek session login dulu ─────────────────────────────────
+if (checkSession()) {
+  // Sudah login — langsung initApp
+  document.getElementById('login-screen').classList.add('hidden');
+  initApp();
 } else {
-  // Update status koneksi di welcome screen
-  ['meta','google','tiktok'].forEach(p => {
-    const el = document.getElementById('wp-'+p+'-conn');
-    if (el) {
-      const conn = isConnected(p);
-      el.textContent = conn ? 'Token tersimpan ✓' : 'Belum terhubung';
-      el.className = 'wp-conn ' + (conn ? 'yes' : 'no');
-    }
-  });
+  // Belum login — tampilkan login screen
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('app-layout').style.display = 'none';
+  // Fokus ke input username
+  setTimeout(() => document.getElementById('login-user').focus(), 100);
 }
-
-// ── Init (hanya jalan jika tidak ada savedPlatforms — sudah di atas) ──
 </script>
 </body>
 </html>
