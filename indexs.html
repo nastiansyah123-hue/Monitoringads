@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advertiser Monitor v2</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#0d0f12; --surface:#161920; --surface2:#1e2330; --surface3:#252c3a;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0; --text2:#7a8099; --text3:#4a5068;
+  --mono:'DM Mono',monospace; --sans:'Sora',sans-serif;
+  --meta:#1877F2; --meta-bg:rgba(24,119,242,0.12); --meta-text:#60a5fa;
+  --google:#EA4335; --google-bg:rgba(234,67,53,0.12); --google-text:#f87171;
+  --tiktok:#010101; --tiktok-bg:rgba(255,255,255,0.08); --tiktok-text:#e2e8f0;
+  --green:#22d3a0; --green-bg:rgba(34,211,160,0.1); --green-text:#22d3a0;
+  --amber:#f5a623; --amber-bg:rgba(245,166,35,0.1); --amber-text:#f5a623;
+  --red:#f75c5c; --red-bg:rgba(247,92,92,0.1); --red-text:#f75c5c;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;line-height:1.6;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.main{flex:1;overflow-x:hidden;}
+.logo{display:flex;align-items:center;gap:10px;padding:0 20px 28px;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.logo-icon svg{width:18px;height:18px;fill:white;}
+.logo-name{font-size:14px;font-weight:600;letter-spacing:-0.02em;}
+.logo-name span{color:#4f8ef7;}
+.nav-section{padding:0 12px;margin-bottom:8px;}
+.nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:0 8px;margin-bottom:6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text2);cursor:pointer;transition:all .15s;font-size:13px;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(79,142,247,0.12);color:#4f8ef7;}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);}
+.avatar-row{display:flex;align-items:center;gap:10px;}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:white;flex-shrink:0;}
+.avatar-info p{font-size:12px;font-weight:500;}
+.avatar-info span{font-size:11px;color:var(--text2);}
+
+/* Platform selector */
+.platform-bar{display:flex;gap:10px;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap;}
+.platform-btn{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;transition:all .2s;position:relative;}
+.platform-btn:hover{background:var(--surface2);}
+.platform-btn.active-meta{background:var(--meta-bg);border-color:rgba(24,119,242,0.3);color:var(--meta-text);}
+.platform-btn.active-google{background:var(--google-bg);border-color:rgba(234,67,53,0.3);color:var(--google-text);}
+.platform-btn.active-tiktok{background:var(--tiktok-bg);border-color:rgba(255,255,255,0.15);color:var(--tiktok-text);}
+.platform-btn.active-all{background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.3);color:#4f8ef7;}
+.platform-icon{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.p-badge{font-size:10px;padding:1px 6px;border-radius:100px;font-family:var(--mono);margin-left:2px;}
+.p-badge-meta{background:var(--meta-bg);color:var(--meta-text);}
+.p-badge-google{background:var(--google-bg);color:var(--google-text);}
+.p-badge-tiktok{background:var(--tiktok-bg);color:var(--tiktok-text);}
+.p-badge-all{background:rgba(79,142,247,0.15);color:#4f8ef7;}
+.conn-dot{width:6px;height:6px;border-radius:50%;position:absolute;top:6px;right:6px;}
+.conn-dot.connected{background:var(--green);}
+.conn-dot.disconnected{background:var(--text3);}
+
+/* API config panel */
+.api-panel{display:none;background:var(--surface2);border-bottom:1px solid var(--border);padding:16px 28px;}
+.api-panel.open{display:block;}
+.api-panel-inner{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.api-field{display:flex;flex-direction:column;gap:5px;}
+.api-label{font-size:11px;color:var(--text2);font-weight:500;}
+.api-input{font-family:var(--mono);font-size:11px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:100%;}
+.api-input:focus{outline:none;border-color:rgba(79,142,247,0.4);}
+.api-actions{display:flex;align-items:flex-end;gap:8px;}
+.btn{font-family:var(--sans);font-size:12px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:var(--surface3);}
+.btn-primary{background:#4f8ef7;border-color:#4f8ef7;color:white;}
+.btn-primary:hover{background:#3d7ef0;}
+.btn-sm{padding:5px 10px;font-size:11px;}
+
+/* Header */
+.page-header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap;}
+.page-title h1{font-size:17px;font-weight:600;letter-spacing:-0.02em;}
+.page-title p{font-size:11px;color:var(--text2);margin-top:2px;font-family:var(--mono);}
+.header-actions{display:flex;align-items:center;gap:8px;}
+select.btn{appearance:none;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a8099' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+
+/* Content */
+.content{padding:22px 28px;}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color .15s;}
+.mc:hover{border-color:var(--border2);}
+.mc-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.mc-val{font-size:24px;font-weight:600;letter-spacing:-0.03em;font-family:var(--mono);}
+.mc-delta{font-size:11px;margin-top:6px;}
+.up{color:var(--green);} .dn{color:var(--red);}
+.mc-bar{height:2px;background:var(--surface2);border-radius:2px;margin-top:12px;overflow:hidden;}
+.mc-bar-fill{height:100%;border-radius:2px;}
+
+/* Platform breakdown cards */
+.platform-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.pb-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .2s;}
+.pb-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.pb-card.selected-meta{border-color:rgba(24,119,242,0.4);background:rgba(24,119,242,0.05);}
+.pb-card.selected-google{border-color:rgba(234,67,53,0.4);background:rgba(234,67,53,0.05);}
+.pb-card.selected-tiktok{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.03);}
+.pb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.pb-name{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;}
+.pb-status{font-size:10px;padding:2px 7px;border-radius:100px;font-family:var(--mono);}
+.pb-status.connected{background:var(--green-bg);color:var(--green-text);}
+.pb-status.disconnected{background:rgba(120,120,140,0.1);color:var(--text2);}
+.pb-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.pb-metric{background:var(--surface2);border-radius:7px;padding:8px 10px;}
+.pb-metric-label{font-size:10px;color:var(--text2);margin-bottom:3px;}
+.pb-metric-val{font-size:14px;font-weight:600;font-family:var(--mono);}
+.pb-connect-btn{width:100%;margin-top:10px;font-size:11px;padding:6px;border-radius:7px;border:1px dashed var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);transition:all .15s;text-align:center;}
+.pb-connect-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* Charts */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;}
+.chart-wrap{position:relative;width:100%;}
+.legend{display:flex;gap:12px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);font-family:var(--mono);}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+/* Table */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:18px;}
+.search-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap;}
+.filters{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{font-size:11px;font-weight:500;padding:4px 12px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);transition:all .15s;}
+.pill:hover{border-color:var(--border2);color:var(--text);}
+.pill.active{background:#4f8ef7;border-color:#4f8ef7;color:white;}
+.pill.pill-meta.active{background:var(--meta-bg);border-color:rgba(24,119,242,0.3);color:var(--meta-text);}
+.pill.pill-google.active{background:var(--google-bg);border-color:rgba(234,67,53,0.3);color:var(--google-text);}
+.pill.pill-tiktok.active{background:var(--tiktok-bg);border-color:rgba(255,255,255,0.15);color:var(--tiktok-text);}
+.search{font-family:var(--sans);font-size:12px;padding:7px 12px 7px 32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);width:200px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' fill='%234a5068' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center;}
+.search:focus{outline:none;border-color:rgba(79,142,247,0.4);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+th{text-align:left;padding:8px 10px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:11px 10px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+.adv-name{font-weight:500;font-size:13px;}
+.adv-id{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px;}
+.badge{font-size:10px;padding:2px 8px;border-radius:100px;font-weight:500;font-family:var(--mono);display:inline-block;}
+.badge-active{background:var(--green-bg);color:var(--green-text);}
+.badge-paused{background:var(--amber-bg);color:var(--amber-text);}
+.badge-ended{background:rgba(120,120,140,0.1);color:var(--text2);}
+.badge-meta{background:var(--meta-bg);color:var(--meta-text);}
+.badge-google{background:var(--google-bg);color:var(--google-text);}
+.badge-tiktok{background:var(--tiktok-bg);color:var(--tiktok-text);}
+.num{font-family:var(--mono);font-size:12px;}
+.prog{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;min-width:50px;}
+.prog-fill{height:100%;border-radius:2px;}
+.action-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);transition:all .15s;}
+.action-btn:hover{background:var(--surface2);color:var(--text);}
+
+/* Detail panel */
+.detail-panel{display:none;}
+.detail-panel.open{display:block;}
+.back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;background:none;border:none;font-family:var(--sans);}
+.back:hover{color:var(--text);}
+
+/* Setup modal overlay */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;width:480px;max-width:95vw;}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:6px;}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;}
+.modal-field{margin-bottom:14px;}
+.modal-label{font-size:12px;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+.modal-input{font-family:var(--mono);font-size:12px;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);width:100%;}
+.modal-input:focus{outline:none;border-color:rgba(79,142,247,0.5);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.modal-hint{font-size:11px;color:var(--text3);margin-top:4px;}
+.platform-logo{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+
+@media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr);}.platform-breakdown{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.api-panel-inner{grid-template-columns:1fr;}}
+@media(max-width:700px){.sidebar{display:none;}}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg></div>
+      <div class="logo-name">Ad<span>Monitor</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Utama</div>
+      <button class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        Advertiser
+      </button>
+      <button class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+        Kampanye
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Integrasi</div>
+      <button class="nav-item" onclick="openModal('meta')">
+        <svg viewBox="0 0 24 24" fill="#1877F2" width="16" height="16"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        Meta Ads
+        <span style="margin-left:auto;font-size:10px;padding:1px 6px;border-radius:100px;" id="meta-sidebar-badge" class="badge-active badge">OFF</span>
+      </button>
+      <button class="nav-item" onclick="openModal('google')">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#EA4335" d="M12 10.8V14h3.75c-.15 1.02-.95 2.99-3.75 2.99-2.26 0-4.1-1.87-4.1-4.17s1.84-4.17 4.1-4.17c1.28 0 2.15.55 2.64 1.02L17 7.37A6.75 6.75 0 0 0 12 5.17C8.13 5.17 5 8.3 5 12.17s3.13 7 7 7c4.04 0 6.72-2.84 6.72-6.84 0-.46-.05-.81-.11-1.16H12z"/></svg>
+        Google Ads
+        <span style="margin-left:auto;font-size:10px;padding:1px 6px;border-radius:100px;" id="google-sidebar-badge" class="badge-active badge">OFF</span>
+      </button>
+      <button class="nav-item" onclick="openModal('tiktok')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--text2)"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.85a8.17 8.17 0 0 0 4.78 1.52V6.91a4.85 4.85 0 0 1-1.01-.22z"/></svg>
+        TikTok Ads
+        <span style="margin-left:auto;font-size:10px;padding:1px 6px;border-radius:100px;" id="tiktok-sidebar-badge" class="badge-active badge">OFF</span>
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar-row">
+        <div class="avatar">HJ</div>
+        <div class="avatar-info"><p>Herbal Jaya</p><span>Admin</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <!-- Platform selector bar -->
+    <div class="platform-bar">
+      <button class="platform-btn active-all" id="btn-all" onclick="selectPlatform('all')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg>
+        Semua Platform
+        <span class="p-badge p-badge-all" id="cnt-all">0</span>
+      </button>
+      <button class="platform-btn" id="btn-meta" onclick="selectPlatform('meta')">
+        <div class="platform-icon" style="background:#1877F2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        </div>
+        Meta Ads
+        <span class="p-badge p-badge-meta" id="cnt-meta">0</span>
+        <div class="conn-dot disconnected" id="dot-meta"></div>
+      </button>
+      <button class="platform-btn" id="btn-google" onclick="selectPlatform('google')">
+        <div class="platform-icon" style="background:white;border:1px solid #eee">
+          <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.8V14h3.75c-.15 1.02-.95 2.99-3.75 2.99-2.26 0-4.1-1.87-4.1-4.17s1.84-4.17 4.1-4.17c1.28 0 2.15.55 2.64 1.02L17 7.37A6.75 6.75 0 0 0 12 5.17C8.13 5.17 5 8.3 5 12.17s3.13 7 7 7c4.04 0 6.72-2.84 6.72-6.84 0-.46-.05-.81-.11-1.16H12z"/></svg>
+        </div>
+        Google Ads
+        <span class="p-badge p-badge-google" id="cnt-google">0</span>
+        <div class="conn-dot disconnected" id="dot-google"></div>
+      </button>
+      <button class="platform-btn" id="btn-tiktok" onclick="selectPlatform('tiktok')">
+        <div class="platform-icon" style="background:#010101;border:1px solid #333">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.85a8.17 8.17 0 0 0 4.78 1.52V6.91a4.85 4.85 0 0 1-1.01-.22z"/></svg>
+        </div>
+        TikTok Ads
+        <span class="p-badge p-badge-tiktok" id="cnt-tiktok">0</span>
+        <div class="conn-dot disconnected" id="dot-tiktok"></div>
+      </button>
+      <button class="btn btn-sm" style="margin-left:auto" onclick="toggleApiPanel()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;vertical-align:-1px"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        Konfigurasi API
+      </button>
+    </div>
+
+    <!-- API Config Panel (collapsible) -->
+    <div class="api-panel" id="api-panel">
+      <div class="api-panel-inner">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--meta-text);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            <div style="width:14px;height:14px;border-radius:3px;background:#1877F2;display:flex;align-items:center;justify-content:center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg></div>
+            Meta Ads
+          </div>
+          <div class="api-field" style="margin-bottom:6px;">
+            <div class="api-label">Access Token</div>
+            <input class="api-input" type="password" id="cfg-meta-token" placeholder="EAAxxxxxx..." oninput="saveConfig()">
+          </div>
+          <div class="api-field">
+            <div class="api-label">Business ID</div>
+            <input class="api-input" type="text" id="cfg-meta-biz" placeholder="61576475977702" oninput="saveConfig()">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--google-text);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            <div style="width:14px;height:14px;border-radius:3px;background:white;display:flex;align-items:center;justify-content:center;"><svg width="9" height="9" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.8V14h3.75c-.15 1.02-.95 2.99-3.75 2.99-2.26 0-4.1-1.87-4.1-4.17s1.84-4.17 4.1-4.17c1.28 0 2.15.55 2.64 1.02L17 7.37A6.75 6.75 0 0 0 12 5.17C8.13 5.17 5 8.3 5 12.17s3.13 7 7 7c4.04 0 6.72-2.84 6.72-6.84 0-.46-.05-.81-.11-1.16H12z"/></svg></div>
+            Google Ads
+          </div>
+          <div class="api-field" style="margin-bottom:6px;">
+            <div class="api-label">Developer Token</div>
+            <input class="api-input" type="password" id="cfg-google-token" placeholder="xxxx-xxxx-xxxx" oninput="saveConfig()">
+          </div>
+          <div class="api-field">
+            <div class="api-label">MCC / Customer ID</div>
+            <input class="api-input" type="text" id="cfg-google-mcc" placeholder="1234567890" oninput="saveConfig()">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--tiktok-text);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            <div style="width:14px;height:14px;border-radius:3px;background:#010101;border:1px solid #333;display:flex;align-items:center;justify-content:center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.85a8.17 8.17 0 0 0 4.78 1.52V6.91a4.85 4.85 0 0 1-1.01-.22z"/></svg></div>
+            TikTok Ads
+          </div>
+          <div class="api-field" style="margin-bottom:6px;">
+            <div class="api-label">Access Token</div>
+            <input class="api-input" type="password" id="cfg-tiktok-token" placeholder="xxxxxxxxxxxxxxxx" oninput="saveConfig()">
+          </div>
+          <div class="api-field">
+            <div class="api-label">Advertiser ID</div>
+            <input class="api-input" type="text" id="cfg-tiktok-adv" placeholder="7xxxxxxxxxxxxxxxxx" oninput="saveConfig()">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+        <button class="btn btn-primary btn-sm" onclick="testConnections()">Test Koneksi</button>
+        <button class="btn btn-sm" onclick="clearConfig()">Reset</button>
+        <span id="test-result" style="font-size:11px;color:var(--text2);font-family:var(--mono);"></span>
+      </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="main-view">
+      <div class="page-header">
+        <div class="page-title">
+          <h1 id="page-h1">Semua Platform</h1>
+          <p id="last-update">Data dummy — hubungkan API untuk data real</p>
+        </div>
+        <div class="header-actions">
+          <select class="btn" id="period-sel" onchange="renderAll()">
+            <option value="7">7 Hari</option>
+            <option value="30" selected>30 Hari</option>
+            <option value="90">90 Hari</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="renderAll()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;vertical-align:-1px"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <!-- Metrics -->
+        <div class="metrics">
+          <div class="mc">
+            <div class="mc-label">Total Advertiser</div>
+            <div class="mc-val" id="m-total">0</div>
+            <div class="mc-delta up" id="m-total-d"></div>
+            <div class="mc-bar"><div class="mc-bar-fill" id="m-total-b" style="background:#4f8ef7"></div></div>
+          </div>
+          <div class="mc">
+            <div class="mc-label">Total Spend</div>
+            <div class="mc-val" id="m-spend">-</div>
+            <div class="mc-delta up" id="m-spend-d"></div>
+            <div class="mc-bar"><div class="mc-bar-fill" id="m-spend-b" style="background:#22d3a0"></div></div>
+          </div>
+          <div class="mc">
+            <div class="mc-label">Rata-rata CTR</div>
+            <div class="mc-val" id="m-ctr">-</div>
+            <div class="mc-delta" id="m-ctr-d"></div>
+            <div class="mc-bar"><div class="mc-bar-fill" id="m-ctr-b" style="background:#f5a623"></div></div>
+          </div>
+          <div class="mc">
+            <div class="mc-label">Avg. ROAS</div>
+            <div class="mc-val" id="m-roas">-</div>
+            <div class="mc-delta up" id="m-roas-d"></div>
+            <div class="mc-bar"><div class="mc-bar-fill" id="m-roas-b" style="background:#7c5cfc"></div></div>
+          </div>
+        </div>
+
+        <!-- Platform breakdown cards -->
+        <div class="platform-breakdown" id="platform-cards"></div>
+
+        <!-- Charts -->
+        <div class="grid2">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">Tren spend harian</div>
+              <div class="legend" id="spend-legend"></div>
+            </div>
+            <div class="chart-wrap" style="height:190px"><canvas id="spendChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">CTR per platform</div>
+            </div>
+            <div class="chart-wrap" style="height:190px"><canvas id="ctrChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-card">
+          <div class="card-head"><div class="card-title">Daftar advertiser</div></div>
+          <div class="search-row">
+            <div class="filters" id="status-filters">
+              <button class="pill active" onclick="setFilter(this,'all')">Semua</button>
+              <button class="pill" onclick="setFilter(this,'Aktif')">Aktif</button>
+              <button class="pill" onclick="setFilter(this,'Paused')">Paused</button>
+              <button class="pill" onclick="setFilter(this,'Ended')">Ended</button>
+            </div>
+            <input class="search" type="text" id="search" placeholder="Cari advertiser..." oninput="filterTable()">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:22%">Advertiser</th>
+                  <th style="width:10%">Platform</th>
+                  <th style="width:10%">Status</th>
+                  <th style="width:13%">Spend</th>
+                  <th style="width:8%">CTR</th>
+                  <th style="width:8%">ROAS</th>
+                  <th style="width:11%">Impresi</th>
+                  <th style="width:11%">Budget</th>
+                  <th style="width:7%">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="adv-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Setup Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div class="platform-logo" id="modal-logo"></div>
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div style="font-size:12px;color:var(--text2);" id="modal-sub"></div>
+      </div>
+    </div>
+    <div id="modal-fields"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('modal-overlay').classList.remove('open')">Batal</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveFromModal()">Simpan & Connect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PLATFORMS = {
+  meta: { label:'Meta Ads', color:'#1877F2', textColor:'#60a5fa', bg:'rgba(24,119,242,0.12)' },
+  google: { label:'Google Ads', color:'#EA4335', textColor:'#f87171', bg:'rgba(234,67,53,0.12)' },
+  tiktok: { label:'TikTok Ads', color:'#010101', textColor:'#e2e8f0', bg:'rgba(255,255,255,0.08)' },
+};
+
+const ALL_DATA = [
+  { id:'ADV-001', name:'Tokopedia', platform:'google', status:'Aktif', spend:820000000, ctr:4.2, roas:5.1, imp:2400000, budget:90 },
+  { id:'ADV-002', name:'Shopee ID', platform:'meta', status:'Aktif', spend:650000000, ctr:3.8, roas:4.7, imp:1980000, budget:75 },
+  { id:'ADV-003', name:'Gojek', platform:'tiktok', status:'Aktif', spend:540000000, ctr:4.0, roas:4.3, imp:1650000, budget:60 },
+  { id:'ADV-004', name:'BCA Digital', platform:'meta', status:'Aktif', spend:430000000, ctr:2.9, roas:3.8, imp:1200000, budget:55 },
+  { id:'ADV-005', name:'Grab ID', platform:'google', status:'Paused', spend:310000000, ctr:3.1, roas:3.5, imp:980000, budget:40 },
+  { id:'ADV-006', name:'Traveloka', platform:'tiktok', status:'Aktif', spend:280000000, ctr:3.6, roas:4.0, imp:870000, budget:38 },
+  { id:'ADV-007', name:'OVO Finance', platform:'google', status:'Aktif', spend:245000000, ctr:2.7, roas:3.2, imp:740000, budget:85 },
+  { id:'ADV-008', name:'Bukalapak', platform:'meta', status:'Paused', spend:198000000, ctr:2.4, roas:2.9, imp:620000, budget:30 },
+  { id:'ADV-009', name:'Blibli', platform:'tiktok', status:'Aktif', spend:175000000, ctr:3.3, roas:3.9, imp:550000, budget:35 },
+  { id:'ADV-010', name:'Lazada ID', platform:'meta', status:'Ended', spend:120000000, ctr:1.9, roas:2.1, imp:390000, budget:100 },
+  { id:'ADV-011', name:'Dana Dompet', platform:'google', status:'Aktif', spend:95000000, ctr:2.1, roas:2.8, imp:310000, budget:28 },
+  { id:'ADV-012', name:'Tiket.com', platform:'tiktok', status:'Ended', spend:78000000, ctr:1.7, roas:1.9, imp:240000, budget:100 },
+];
+
+let currentPlatform = 'all';
+let currentFilter = 'all';
+let charts = {};
+let apiConfig = JSON.parse(localStorage.getItem('admonitor_config') || '{}');
+let apiPanelOpen = false;
+let currentModal = null;
+
+function fmtRp(n) {
+  if (n>=1e9) return 'Rp'+(n/1e9).toFixed(1)+'M';
+  if (n>=1e6) return 'Rp'+(n/1e6).toFixed(0)+'jt';
+  return 'Rp'+n.toLocaleString('id-ID');
+}
+function fmtImp(n) {
+  if (n>=1e6) return (n/1e6).toFixed(1)+'M';
+  if (n>=1e3) return (n/1e3).toFixed(0)+'K';
+  return String(n);
+}
+function budgetColor(p) { return p>80?'#f75c5c':p>50?'#f5a623':'#22d3a0'; }
+
+function getFiltered() {
+  let data = currentPlatform==='all' ? ALL_DATA : ALL_DATA.filter(a=>a.platform===currentPlatform);
+  if (currentFilter!=='all') data = data.filter(a=>a.status===currentFilter);
+  const q = document.getElementById('search').value.toLowerCase();
+  if (q) data = data.filter(a=>a.name.toLowerCase().includes(q)||a.id.toLowerCase().includes(q));
+  return data;
+}
+
+function selectPlatform(p) {
+  currentPlatform = p;
+  document.querySelectorAll('.platform-btn').forEach(b=>b.className='platform-btn');
+  if (p==='all') document.getElementById('btn-all').classList.add('active-all');
+  else document.getElementById('btn-'+p).classList.add('active-'+p);
+  const titles = {all:'Semua Platform', meta:'Meta Ads', google:'Google Ads', tiktok:'TikTok Ads'};
+  document.getElementById('page-h1').textContent = titles[p];
+  renderAll();
+}
+
+function toggleApiPanel() {
+  apiPanelOpen = !apiPanelOpen;
+  document.getElementById('api-panel').classList.toggle('open', apiPanelOpen);
+}
+
+function saveConfig() {
+  apiConfig = {
+    meta: { token: document.getElementById('cfg-meta-token').value, bizId: document.getElementById('cfg-meta-biz').value },
+    google: { token: document.getElementById('cfg-google-token').value, mccId: document.getElementById('cfg-google-mcc').value },
+    tiktok: { token: document.getElementById('cfg-tiktok-token').value, advId: document.getElementById('cfg-tiktok-adv').value },
+  };
+  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+  updateConnectionStatus();
+}
+
+function clearConfig() {
+  apiConfig = {};
+  localStorage.removeItem('admonitor_config');
+  ['cfg-meta-token','cfg-meta-biz','cfg-google-token','cfg-google-mcc','cfg-tiktok-token','cfg-tiktok-adv'].forEach(id=>document.getElementById(id).value='');
+  updateConnectionStatus();
+  document.getElementById('test-result').textContent = 'Konfigurasi direset.';
+}
+
+function loadConfigToInputs() {
+  if (apiConfig.meta) {
+    document.getElementById('cfg-meta-token').value = apiConfig.meta.token||'';
+    document.getElementById('cfg-meta-biz').value = apiConfig.meta.bizId||'';
+  }
+  if (apiConfig.google) {
+    document.getElementById('cfg-google-token').value = apiConfig.google.token||'';
+    document.getElementById('cfg-google-mcc').value = apiConfig.google.mccId||'';
+  }
+  if (apiConfig.tiktok) {
+    document.getElementById('cfg-tiktok-token').value = apiConfig.tiktok.token||'';
+    document.getElementById('cfg-tiktok-adv').value = apiConfig.tiktok.advId||'';
+  }
+}
+
+function isConnected(p) {
+  if (p==='meta') return !!(apiConfig.meta?.token && apiConfig.meta?.bizId);
+  if (p==='google') return !!(apiConfig.google?.token && apiConfig.google?.mccId);
+  if (p==='tiktok') return !!(apiConfig.tiktok?.token && apiConfig.tiktok?.advId);
+  return false;
+}
+
+function updateConnectionStatus() {
+  ['meta','google','tiktok'].forEach(p => {
+    const conn = isConnected(p);
+    const dot = document.getElementById('dot-'+p);
+    const badge = document.getElementById(p+'-sidebar-badge');
+    if (dot) { dot.className = 'conn-dot '+(conn?'connected':'disconnected'); }
+    if (badge) { badge.textContent = conn?'ON':'OFF'; badge.className = conn?'badge badge-active':'badge badge-ended'; }
+  });
+  renderPlatformCards();
+}
+
+async function testConnections() {
+  const res = document.getElementById('test-result');
+  res.textContent = 'Menguji koneksi...';
+  const results = [];
+  if (isConnected('meta')) {
+    try {
+      const r = await fetch(`https://graph.facebook.com/v19.0/${apiConfig.meta.bizId}/adaccounts?access_token=${apiConfig.meta.token}&fields=id,name&limit=1`);
+      const d = await r.json();
+      results.push(d.data ? 'Meta ✓' : 'Meta ✗ ('+((d.error?.message)||'error')+')');
+    } catch(e) { results.push('Meta ✗'); }
+  }
+  if (isConnected('google')) results.push('Google → via backend');
+  if (isConnected('tiktok')) results.push('TikTok → via backend');
+  if (!results.length) res.textContent = 'Belum ada API yang dikonfigurasi.';
+  else res.textContent = results.join(' · ');
+}
+
+// Modal
+const MODAL_CONFIG = {
+  meta: {
+    title:'Hubungkan Meta Ads',
+    sub:'Masukkan Access Token dan Business ID kamu',
+    logo:`<div style="width:28px;height:28px;border-radius:6px;background:#1877F2;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg></div>`,
+    fields:[
+      {id:'m-meta-token',label:'Access Token',type:'password',placeholder:'EAAxxxxxx...',hint:'Dari Graph API Explorer atau System User'},
+      {id:'m-meta-biz',label:'Business ID',type:'text',placeholder:'61576475977702',hint:'Business Settings → Business Info'},
+    ]
+  },
+  google: {
+    title:'Hubungkan Google Ads',
+    sub:'Masukkan Developer Token dan MCC ID kamu',
+    logo:`<div style="width:28px;height:28px;border-radius:6px;background:white;border:1px solid #eee;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.8V14h3.75c-.15 1.02-.95 2.99-3.75 2.99-2.26 0-4.1-1.87-4.1-4.17s1.84-4.17 4.1-4.17c1.28 0 2.15.55 2.64 1.02L17 7.37A6.75 6.75 0 0 0 12 5.17C8.13 5.17 5 8.3 5 12.17s3.13 7 7 7c4.04 0 6.72-2.84 6.72-6.84 0-.46-.05-.81-.11-1.16H12z"/></svg></div>`,
+    fields:[
+      {id:'m-google-token',label:'Developer Token',type:'password',placeholder:'xxxx-xxxx-xxxx',hint:'Google Ads → Tools → API Center'},
+      {id:'m-google-mcc',label:'MCC / Customer ID',type:'text',placeholder:'1234567890',hint:'ID angka akun Manager, tanpa dash'},
+    ]
+  },
+  tiktok: {
+    title:'Hubungkan TikTok Ads',
+    sub:'Masukkan Access Token dan Advertiser ID kamu',
+    logo:`<div style="width:28px;height:28px;border-radius:6px;background:#010101;border:1px solid #333;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.85a8.17 8.17 0 0 0 4.78 1.52V6.91a4.85 4.85 0 0 1-1.01-.22z"/></svg></div>`,
+    fields:[
+      {id:'m-tiktok-token',label:'Access Token',type:'password',placeholder:'xxxxxxxxxxxxxxxx',hint:'TikTok for Business → API → Access Token'},
+      {id:'m-tiktok-adv',label:'Advertiser ID',type:'text',placeholder:'7xxxxxxxxxxxxxxxxx',hint:'TikTok Ads Manager → akun kamu'},
+    ]
+  },
+};
+
+function openModal(p) {
+  currentModal = p;
+  const cfg = MODAL_CONFIG[p];
+  document.getElementById('modal-logo').innerHTML = cfg.logo;
+  document.getElementById('modal-title').textContent = cfg.title;
+  document.getElementById('modal-sub').textContent = cfg.sub;
+  const stored = apiConfig[p] || {};
+  document.getElementById('modal-fields').innerHTML = cfg.fields.map(f=>`
+    <div class="modal-field">
+      <div class="modal-label">${f.label}</div>
+      <input class="modal-input" type="${f.type}" id="${f.id}" placeholder="${f.placeholder}" value="${stored[Object.keys(stored)[cfg.fields.indexOf(f)]]||''}">
+      <div class="modal-hint">${f.hint}</div>
+    </div>
+  `).join('');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target===document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function saveFromModal() {
+  if (!currentModal) return;
+  if (currentModal==='meta') {
+    if (!apiConfig.meta) apiConfig.meta = {};
+    apiConfig.meta.token = document.getElementById('m-meta-token').value;
+    apiConfig.meta.bizId = document.getElementById('m-meta-biz').value;
+  } else if (currentModal==='google') {
+    if (!apiConfig.google) apiConfig.google = {};
+    apiConfig.google.token = document.getElementById('m-google-token').value;
+    apiConfig.google.mccId = document.getElementById('m-google-mcc').value;
+  } else if (currentModal==='tiktok') {
+    if (!apiConfig.tiktok) apiConfig.tiktok = {};
+    apiConfig.tiktok.token = document.getElementById('m-tiktok-token').value;
+    apiConfig.tiktok.advId = document.getElementById('m-tiktok-adv').value;
+  }
+  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+  loadConfigToInputs();
+  updateConnectionStatus();
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function renderPlatformCards() {
+  const platforms = ['meta','google','tiktok'];
+  const container = document.getElementById('platform-cards');
+  container.innerHTML = platforms.map(p => {
+    const data = ALL_DATA.filter(a=>a.platform===p);
+    const totalSpend = data.reduce((s,a)=>s+a.spend,0);
+    const avgCtr = data.length ? (data.reduce((s,a)=>s+a.ctr,0)/data.length).toFixed(1) : '0';
+    const conn = isConnected(p);
+    const pl = PLATFORMS[p];
+    const isSel = currentPlatform===p;
+    return `
+      <div class="pb-card ${isSel?'selected-'+p:''}" onclick="selectPlatform('${p}')">
+        <div class="pb-head">
+          <div class="pb-name">
+            <span style="font-size:13px">${pl.label}</span>
+          </div>
+          <span class="pb-status ${conn?'connected':'disconnected'}">${conn?'Connected':'Disconnected'}</span>
+        </div>
+        <div class="pb-metrics">
+          <div class="pb-metric">
+            <div class="pb-metric-label">Advertiser</div>
+            <div class="pb-metric-val" style="color:${pl.textColor}">${data.length}</div>
+          </div>
+          <div class="pb-metric">
+            <div class="pb-metric-label">Total Spend</div>
+            <div class="pb-metric-val">${fmtRp(totalSpend)}</div>
+          </div>
+          <div class="pb-metric">
+            <div class="pb-metric-label">Avg CTR</div>
+            <div class="pb-metric-val">${avgCtr}%</div>
+          </div>
+          <div class="pb-metric">
+            <div class="pb-metric-label">Status</div>
+            <div class="pb-metric-val" style="font-size:12px;color:${conn?'#22d3a0':'#7a8099'}">${conn?'API Active':'Demo'}</div>
+          </div>
+        </div>
+        ${!conn?`<button class="pb-connect-btn" onclick="event.stopPropagation();openModal('${p}')">+ Hubungkan ${pl.label}</button>`:''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMetrics(data) {
+  const total = data.length;
+  const spend = data.reduce((s,a)=>s+a.spend,0);
+  const ctr = total ? (data.reduce((s,a)=>s+a.ctr,0)/total).toFixed(1) : '0';
+  const roas = total ? (data.reduce((s,a)=>s+a.roas,0)/total).toFixed(1) : '0';
+  document.getElementById('m-total').textContent = total;
+  document.getElementById('m-total-d').innerHTML = '<span class="up">▲ aktif: '+data.filter(a=>a.status==='Aktif').length+'</span>';
+  document.getElementById('m-total-b').style.width = Math.min(100,(total/12*100)).toFixed(0)+'%';
+  document.getElementById('m-spend').textContent = fmtRp(spend);
+  document.getElementById('m-spend-d').innerHTML = '<span class="up">▲ +8,3% vs bulan lalu</span>';
+  document.getElementById('m-spend-b').style.width = '65%';
+  document.getElementById('m-ctr').textContent = ctr+'%';
+  document.getElementById('m-ctr-d').innerHTML = '<span class="'+(parseFloat(ctr)>3?'up':'dn')+'">'+ctr+'% rata-rata</span>';
+  document.getElementById('m-ctr-b').style.width = (parseFloat(ctr)/6*100).toFixed(0)+'%';
+  document.getElementById('m-roas').textContent = roas+'x';
+  document.getElementById('m-roas-d').innerHTML = '<span class="up">▲ +0,3x vs bulan lalu</span>';
+  document.getElementById('m-roas-b').style.width = (parseFloat(roas)/6*100).toFixed(0)+'%';
+}
+
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function renderSpendChart(data) {
+  destroyChart('spend');
+  const pColors = { meta:'#1877F2', google:'#EA4335', tiktok:'#e2e8f0', all:'#4f8ef7' };
+  const labels = Array.from({length:30},(_,i)=>String(i+1));
+  const platforms = currentPlatform==='all' ? ['meta','google','tiktok'] : [currentPlatform];
+  const datasets = platforms.map(p => {
+    const d = data.filter(a=>a.platform===p);
+    const base = d.reduce((s,a)=>s+a.spend,0)/30/1e6;
+    return {
+      label: PLATFORMS[p].label,
+      data: Array.from({length:30},()=>+(base*(0.7+Math.random()*0.65)).toFixed(1)),
+      borderColor: pColors[p], backgroundColor: pColors[p]+'18',
+      borderWidth:2, pointRadius:0, tension:.4, fill: platforms.length===1
+    };
+  });
+  const legend = document.getElementById('spend-legend');
+  legend.innerHTML = platforms.map(p=>`<div class="legend-item"><div class="legend-dot" style="background:${pColors[p]}"></div>${PLATFORMS[p].label}</div>`).join('');
+  charts['spend'] = new Chart(document.getElementById('spendChart'), {
+    type:'line', data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4a5068',font:{size:10},maxTicksLimit:6}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5068',font:{size:10},callback:v=>v+'jt'}}}}
+  });
+}
+
+function renderCtrChart(data) {
+  destroyChart('ctr');
+  const byPlatform = ['meta','google','tiktok'].map(p => {
+    const d = data.filter(a=>a.platform===p);
+    return d.length ? +(d.reduce((s,a)=>s+a.ctr,0)/d.length).toFixed(2) : 0;
+  });
+  const pColors = ['#1877F2','#EA4335','#cccccc'];
+  charts['ctr'] = new Chart(document.getElementById('ctrChart'), {
+    type:'bar',
+    data:{labels:['Meta Ads','Google Ads','TikTok Ads'],
+      datasets:[{data:byPlatform,backgroundColor:pColors.map(c=>c+'40'),borderColor:pColors,borderWidth:1.5,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:'#4a5068',font:{size:11}}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5068',font:{size:11},callback:v=>v+'%'}}}}
+  });
+}
+
+function renderTable(data) {
+  const platformBadge = p => `<span class="badge badge-${p}">${p==='meta'?'Meta':p==='google'?'Google':'TikTok'}</span>`;
+  const statusBadge = s => `<span class="badge badge-${s.toLowerCase()}">${s}</span>`;
+  document.getElementById('adv-body').innerHTML = data.map(a=>`
+    <tr>
+      <td><div class="adv-name">${a.name}</div><div class="adv-id">${a.id}</div></td>
+      <td>${platformBadge(a.platform)}</td>
+      <td>${statusBadge(a.status)}</td>
+      <td class="num">${fmtRp(a.spend)}</td>
+      <td class="num">${a.ctr.toFixed(1)}%</td>
+      <td class="num">${a.roas.toFixed(1)}x</td>
+      <td class="num">${fmtImp(a.imp)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="prog" style="flex:1"><div class="prog-fill" style="width:${a.budget}%;background:${budgetColor(a.budget)}"></div></div>
+          <span class="num" style="font-size:10px;color:var(--text2);width:26px;text-align:right">${a.budget}%</span>
+        </div>
+      </td>
+      <td><button class="action-btn">Detail</button></td>
+    </tr>
+  `).join('');
+}
+
+function setFilter(el, f) {
+  document.querySelectorAll('#status-filters .pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = f;
+  filterTable();
+}
+
+function filterTable() { renderTable(getFiltered()); }
+
+function updateCounts() {
+  document.getElementById('cnt-all').textContent = ALL_DATA.length;
+  ['meta','google','tiktok'].forEach(p=>{
+    document.getElementById('cnt-'+p).textContent = ALL_DATA.filter(a=>a.platform===p).length;
+  });
+}
+
+function renderAll() {
+  const base = currentPlatform==='all' ? ALL_DATA : ALL_DATA.filter(a=>a.platform===currentPlatform);
+  renderMetrics(base);
+  renderPlatformCards();
+  renderSpendChart(base);
+  renderCtrChart(base);
+  renderTable(getFiltered());
+  document.getElementById('last-update').textContent = 'Update: '+new Date().toLocaleString('id-ID',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})+(Object.keys(apiConfig).length?' · API configured':'  · Data dummy');
+}
+
+loadConfigToInputs();
+updateConnectionStatus();
+updateCounts();
+renderAll();
+</script>
+</body>
+</html>
