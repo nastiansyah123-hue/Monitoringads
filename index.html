@@ -1045,9 +1045,32 @@ function initApp() {
     initDatePicker();
     renderAll();
     if (isConnected('meta') && welcomeSelected.has('meta')) {
+      // Coba load cache dulu untuk tampilkan data langsung
+      const cached = loadMetaCache();
+      if (cached && cached.length) {
+        const nonMeta = ALL_DATA.filter(a => a.platform !== 'meta');
+        ALL_DATA.length = 0;
+        nonMeta.forEach(a => ALL_DATA.push(a));
+        cached.forEach(a => ALL_DATA.push(a));
+        updateCounts();
+        renderAll();
+        document.getElementById('last-update').textContent = 'Meta: dari cache · Memuat data terbaru...';
+      }
+      // Fetch data terbaru dari API
       fetchAllMetaAccounts(apiConfig.meta.token)
-        .then(accounts => { if(accounts.length) { cachedMetaAccounts = accounts; fetchAndRenderMeta(accounts); }})
-        .catch(()=>{});
+        .then(accounts => {
+          if (accounts.length) {
+            cachedMetaAccounts = accounts;
+            fetchAndRenderMeta(accounts);
+          }
+        })
+        .catch(err => {
+          const msg = err.message || '';
+          const isExpired = msg.includes('190') || msg.includes('expired') || msg.includes('Invalid OAuth');
+          if (isExpired || cached) {
+            showTokenAlert(isExpired);
+          }
+        });
     }
   } else {
     // Tampilkan welcome screen
@@ -1070,34 +1093,49 @@ const PLATFORMS = {
 };
 
 const DUMMY_DATA = [
-  { id:'ADV-001', name:'Tokopedia', platform:'google', status:'Aktif', spend:820000000, ctr:4.2, roas:5.1, imp:2400000, budget:90 },
-  { id:'ADV-002', name:'Shopee ID', platform:'meta', status:'Aktif', spend:650000000, ctr:3.8, roas:4.7, imp:1980000, budget:75 },
-  { id:'ADV-003', name:'Gojek', platform:'tiktok', status:'Aktif', spend:540000000, ctr:4.0, roas:4.3, imp:1650000, budget:60 },
-  { id:'ADV-004', name:'BCA Digital', platform:'meta', status:'Aktif', spend:430000000, ctr:2.9, roas:3.8, imp:1200000, budget:55 },
-  { id:'ADV-005', name:'Grab ID', platform:'google', status:'Paused', spend:310000000, ctr:3.1, roas:3.5, imp:980000, budget:40 },
-  { id:'ADV-006', name:'Traveloka', platform:'tiktok', status:'Aktif', spend:280000000, ctr:3.6, roas:4.0, imp:870000, budget:38 },
-  { id:'ADV-007', name:'OVO Finance', platform:'google', status:'Aktif', spend:245000000, ctr:2.7, roas:3.2, imp:740000, budget:85 },
-  { id:'ADV-008', name:'Bukalapak', platform:'meta', status:'Paused', spend:198000000, ctr:2.4, roas:2.9, imp:620000, budget:30 },
-  { id:'ADV-009', name:'Blibli', platform:'tiktok', status:'Aktif', spend:175000000, ctr:3.3, roas:3.9, imp:550000, budget:35 },
-  { id:'ADV-010', name:'Lazada ID', platform:'meta', status:'Ended', spend:120000000, ctr:1.9, roas:2.1, imp:390000, budget:100 },
-  { id:'ADV-011', name:'Dana Dompet', platform:'google', status:'Aktif', spend:95000000, ctr:2.1, roas:2.8, imp:310000, budget:28 },
-  { id:'ADV-012', name:'Tiket.com', platform:'tiktok', status:'Ended', spend:78000000, ctr:1.7, roas:1.9, imp:240000, budget:100 },
+  { id:'ADV-001', name:'Tokopedia', platform:'google', status:'Aktif', spend:820000000, ctr:4.2, roas:5.1, imp:2400000, budget:90, leads:0 },
+  { id:'ADV-003', name:'Gojek', platform:'tiktok', status:'Aktif', spend:540000000, ctr:4.0, roas:4.3, imp:1650000, budget:60, leads:0 },
+  { id:'ADV-005', name:'Grab ID', platform:'google', status:'Paused', spend:310000000, ctr:3.1, roas:3.5, imp:980000, budget:40, leads:0 },
+  { id:'ADV-006', name:'Traveloka', platform:'tiktok', status:'Aktif', spend:280000000, ctr:3.6, roas:4.0, imp:870000, budget:38, leads:0 },
+  { id:'ADV-007', name:'OVO Finance', platform:'google', status:'Aktif', spend:245000000, ctr:2.7, roas:3.2, imp:740000, budget:85, leads:0 },
+  { id:'ADV-009', name:'Blibli', platform:'tiktok', status:'Aktif', spend:175000000, ctr:3.3, roas:3.9, imp:550000, budget:35, leads:0 },
+  { id:'ADV-011', name:'Dana Dompet', platform:'google', status:'Aktif', spend:95000000, ctr:2.1, roas:2.8, imp:310000, budget:28, leads:0 },
+  { id:'ADV-012', name:'Tiket.com', platform:'tiktok', status:'Ended', spend:78000000, ctr:1.7, roas:1.9, imp:240000, budget:100, leads:0 },
 ];
 
-const ALL_DATA = [
-  { id:'ADV-001', name:'Tokopedia', platform:'google', status:'Aktif', spend:820000000, ctr:4.2, roas:5.1, imp:2400000, budget:90 },
-  { id:'ADV-002', name:'Shopee ID', platform:'meta', status:'Aktif', spend:650000000, ctr:3.8, roas:4.7, imp:1980000, budget:75 },
-  { id:'ADV-003', name:'Gojek', platform:'tiktok', status:'Aktif', spend:540000000, ctr:4.0, roas:4.3, imp:1650000, budget:60 },
-  { id:'ADV-004', name:'BCA Digital', platform:'meta', status:'Aktif', spend:430000000, ctr:2.9, roas:3.8, imp:1200000, budget:55 },
-  { id:'ADV-005', name:'Grab ID', platform:'google', status:'Paused', spend:310000000, ctr:3.1, roas:3.5, imp:980000, budget:40 },
-  { id:'ADV-006', name:'Traveloka', platform:'tiktok', status:'Aktif', spend:280000000, ctr:3.6, roas:4.0, imp:870000, budget:38 },
-  { id:'ADV-007', name:'OVO Finance', platform:'google', status:'Aktif', spend:245000000, ctr:2.7, roas:3.2, imp:740000, budget:85 },
-  { id:'ADV-008', name:'Bukalapak', platform:'meta', status:'Paused', spend:198000000, ctr:2.4, roas:2.9, imp:620000, budget:30 },
-  { id:'ADV-009', name:'Blibli', platform:'tiktok', status:'Aktif', spend:175000000, ctr:3.3, roas:3.9, imp:550000, budget:35 },
-  { id:'ADV-010', name:'Lazada ID', platform:'meta', status:'Ended', spend:120000000, ctr:1.9, roas:2.1, imp:390000, budget:100 },
-  { id:'ADV-011', name:'Dana Dompet', platform:'google', status:'Aktif', spend:95000000, ctr:2.1, roas:2.8, imp:310000, budget:28 },
-  { id:'ADV-012', name:'Tiket.com', platform:'tiktok', status:'Ended', spend:78000000, ctr:1.7, roas:1.9, imp:240000, budget:100 },
-];
+const ALL_DATA = [...DUMMY_DATA.map(a=>({...a}))];
+
+// Cache data Meta real ke localStorage agar tidak hilang saat token expired
+function saveMetaCache(rows) {
+  try { localStorage.setItem('admonitor_meta_cache', JSON.stringify({ ts: Date.now(), rows })); } catch(e){}
+}
+function loadMetaCache() {
+  try {
+    const raw = localStorage.getItem('admonitor_meta_cache');
+    if (!raw) return null;
+    const { ts, rows } = JSON.parse(raw);
+    const ageHours = (Date.now() - ts) / 3600000;
+    if (ageHours > 24) return null;
+    return rows;
+  } catch(e) { return null; }
+}
+
+function showTokenAlert(isExpired) {
+  const alertEl = document.getElementById('budget-alert-bar');
+  if (!alertEl) return;
+  alertEl.style.display = 'block';
+  alertEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#f5a623;flex-shrink:0"></div>
+      <span style="font-size:12px;color:#f5a623;flex:1">
+        ${isExpired
+          ? '<strong>Token Meta expired</strong> — data ditampilkan dari cache. Silakan generate token baru di <a href="https://developers.facebook.com/tools/explorer" target="_blank" style="color:#4f8ef7">Graph API Explorer</a> lalu update di Konfigurasi API.'
+          : '<strong>Gagal memuat data Meta terbaru</strong> — menampilkan data cache terakhir.'}
+      </span>
+      <button onclick="toggleApiPanel();this.closest(\'div[style]\').style.display=\'none\'" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid #f5a623;background:transparent;color:#f5a623;cursor:pointer;white-space:nowrap">Update Token</button>
+    </div>
+  `;
+}
 
 let currentPlatform = 'all';
 let currentFilter = 'all';
@@ -1225,13 +1263,13 @@ async function fetchAllMetaAccounts(token) {
   let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status,spend_cap,amount_spent,daily_spend_limit,currency&limit=200`;
   while (url) {
     const r = await fetch(url);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
     if (d.error) {
       const code = d.error.code;
       if (code === 190) throw new Error('Token expired — generate token baru di Graph API Explorer');
-      if (code === 200 || code === 100) throw new Error('Permission kurang — tambahkan ads_read ke token');
-      throw new Error(d.error.message || 'API error');
+      if (code === 100) throw new Error('Permission kurang — pastikan ads_read & business_management dicentang');
+      if (r.status === 400) throw new Error('Request tidak valid — pastikan Business ID dikosongkan');
+      throw new Error(d.error.message || 'API error code ' + code);
     }
     all = all.concat(d.data || []);
     url = d.paging?.next || null;
@@ -1314,6 +1352,9 @@ async function fetchAndRenderMeta(adAccounts) {
   ALL_DATA.length = 0;
   nonMeta.forEach(a => ALL_DATA.push(a));
   metaRows.forEach(a => ALL_DATA.push(a));
+
+  // Simpan ke cache localStorage
+  saveMetaCache(metaRows);
 
   updateCounts();
   renderAll();
