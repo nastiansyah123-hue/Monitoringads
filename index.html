@@ -1811,10 +1811,15 @@ async function saveManualLimit(id, currentSpend) {
   const limitVal = parseFloat(document.getElementById('limit-input-'+id)?.value || 0);
   const saldoVal = parseFloat(document.getElementById('saldo-input-'+id)?.value || 0);
   if (!limitVal || limitVal <= 0) { alert('Limit akun wajib diisi'); return; }
+
+  // Simpan lokal & render LANGSUNG dulu
   manualLimits[id] = { limit: limitVal, saldoAwal: saldoVal, spendSaatSet: currentSpend };
   localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+  renderAkun(ALL_DATA); // Render langsung tanpa tunggu Supabase
+
+  // Simpan ke Supabase di background (tidak blocking)
   if (currentUser) {
-    await sb.from('account_limits').upsert({
+    sb.from('account_limits').upsert({
       user_id: currentUser.id,
       account_id: id,
       limit_amount: limitVal,
@@ -1823,7 +1828,6 @@ async function saveManualLimit(id, currentSpend) {
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,account_id' }).catch(()=>{});
   }
-  renderAkun(ALL_DATA);
 }
 
 async function loadManualLimits() {
