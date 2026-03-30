@@ -770,6 +770,8 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
                     <th style="text-align:left;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);">Akun</th>
                     <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);" id="top-col-label">Spend</th>
                     <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);">Hasil</th>
+                    <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);">Sisa Budget</th>
+                    <th style="padding:6px 4px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);"></th>
                   </tr>
                 </thead>
                 <tbody id="top-adv-body"></tbody>
@@ -1736,16 +1738,39 @@ function renderTopAdvTable(data) {
     const val = topAdvSortBy === 'spend' ? fmtRp(a.spend)
       : topAdvSortBy === 'leads' ? (a.leads||0).toLocaleString('id-ID')
       : (a.leads||0)>0 ? fmtRp(Math.round(a.spend/a.leads)) : '–';
-    return `<tr>
+
+    // Hitung sisa budget dari manualLimits
+    const cfg = manualLimits[a.id] || {};
+    const limit = cfg.limit || 0;
+    const spendSejak = cfg.spendSaatSet != null ? Math.max(0, (a.amountSpentRp||a.spend||0) - cfg.spendSaatSet) : 0;
+    const saldoTertunggak = (cfg.saldoAwal||0) + spendSejak;
+    const sisa = limit > 0 ? Math.max(0, limit - saldoTertunggak) : 0;
+    const pct = limit > 0 ? Math.min(100, Math.round(saldoTertunggak/limit*100)) : 0;
+    const col = pct>=90?'#f75c5c':pct>=70?'#f5a623':'#22d3a0';
+
+    const budgetCell = limit > 0 ? `
+      <div style="min-width:90px">
+        <div style="font-size:11px;font-family:var(--mono);color:${col};font-weight:500">${fmtRp(sisa)}</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${pct}% terpakai</div>
+      </div>` : `<span style="font-size:10px;color:var(--text3)">Belum diset</span>`;
+
+    return `<tr style="cursor:pointer" onclick="showView('akun')" title="Lihat di halaman Akun">
       <td style="padding:7px 8px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--border)">${i+1}</td>
       <td style="padding:7px 8px;border-bottom:1px solid var(--border)">
-        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.name}</div>
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">${a.name}</div>
         <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:6px;height:6px;border-radius:50%;background:${pColor[a.platform]||'#888'};flex-shrink:0"></div><span style="font-size:10px;color:var(--text3)">${a.platform==='meta'?'Meta':a.platform==='google'?'Google':'TikTok'}</span></div>
       </td>
       <td style="padding:7px 8px;font-size:12px;font-family:var(--mono);text-align:right;border-bottom:1px solid var(--border);color:${i===0?'#4f8ef7':'var(--text)'}">${val}</td>
       <td style="padding:7px 8px;font-size:12px;font-family:var(--mono);text-align:right;border-bottom:1px solid var(--border)">${(a.leads||0).toLocaleString('id-ID')}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid var(--border)">${budgetCell}</td>
+      <td style="padding:7px 4px;border-bottom:1px solid var(--border)">
+        <button onclick="event.stopPropagation();openKampanye('${a.id}')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);white-space:nowrap">→</button>
+      </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3)">Tidak ada data</td></tr>';
+  }).join('') || '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3)">Tidak ada data</td></tr>';
 }
 
 function renderCtrChart(data) { renderTopAdvTable(data); }
