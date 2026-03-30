@@ -136,6 +136,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .layout{display:flex;height:100vh;overflow:hidden;}
 .sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
 .main{flex:1;overflow-x:hidden;overflow-y:auto;min-height:0;}
+#main-view,#view-akun,#view-kampanye,#view-advertisers,#view-adaccounts,#view-wa{width:100%;min-height:100%;}
 .logo{display:flex;align-items:center;gap:10px;padding:0 20px 28px;}
 .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);border-radius:8px;display:flex;align-items:center;justify-content:center;}
 .logo-icon svg{width:18px;height:18px;fill:white;}
@@ -967,7 +968,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Advertisers -->
-    <div id="view-advertisers" style="display:none">
+    <div id="view-advertisers" style="display:none;background:var(--surface2)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
         <div>
           <h1 style="font-size:17px;font-weight:600">Advertisers</h1>
@@ -1002,7 +1003,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Ad Accounts -->
-    <div id="view-adaccounts" style="display:none">
+    <div id="view-adaccounts" style="display:none;background:var(--surface2)">
       <div class="page-header">
         <div class="page-title"><h1>Ad Accounts</h1><p>Mapping akun iklan ke advertiser</p></div>
         <button class="btn btn-primary btn-sm" onclick="openAccModal()">+ Tambah Ad Account</button>
@@ -1085,7 +1086,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: WA Auto -->
-    <div id="view-wa" style="display:none">
+    <div id="view-wa" style="display:none;background:var(--surface2)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
         <div>
           <h1 style="font-size:17px;font-weight:600">WA Auto</h1>
@@ -1133,11 +1134,22 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
           <div style="font-size:13px;font-weight:600;margin-bottom:14px">Jadwal Otomatis</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-            ${['09.00','14.00','18.00','21.00'].map(j=>`
             <div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)">
-              <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:#4f8ef7">${j}</div>
+              <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:#4f8ef7">09.00</div>
               <div style="font-size:11px;color:var(--text2);margin-top:4px">WIB</div>
-            </div>`).join('')}
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:#4f8ef7">14.00</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:4px">WIB</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:#4f8ef7">18.00</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:4px">WIB</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:#4f8ef7">21.00</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:4px">WIB</div>
+            </div>
           </div>
           <div style="margin-top:12px;font-size:12px;color:var(--text2)">
             Setiap jam tersebut, sistem otomatis fetch data kampanye dari Meta API, analisa performa, dan kirim laporan ke WhatsApp PIC advertiser.
@@ -2435,21 +2447,28 @@ async function loadAdvList() {
   const tbody = document.getElementById('adv-tbody');
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2)">Memuat...</td></tr>';
-  const { data, error } = await sb.from('advertisers').select('*').eq('user_id', currentUser?.id).order('name');
+  
+  if (!currentUser) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2)">Login dulu</td></tr>'; return; }
+
+  const { data, error } = await sb.from('advertisers').select('*').eq('user_id', currentUser.id).order('name');
   if (error) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:#f75c5c">Error: ${error.message}</td></tr>`;
     return;
   }
   if (!data?.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text2)">Belum ada data. Klik "+ Tambah Advertiser"</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text2)">Belum ada advertiser. Klik "+ Tambah Advertiser"</td></tr>';
     return;
   }
+
+  // Simpan data ke window untuk diakses oleh edit button
+  window._advData = {};
+  data.forEach(d => window._advData[d.id] = d);
+
   tbody.innerHTML = data.map(d => {
     const accounts = JSON.parse(d.accounts || '[]');
     const accNames = ALL_DATA.filter(a => accounts.includes(a.id)).map(a =>
       `<span style="font-size:10px;padding:2px 8px;border-radius:100px;background:var(--meta-bg);color:var(--meta-text);white-space:nowrap">${a.name}</span>`
     ).join('');
-    const safeD = encodeURIComponent(JSON.stringify(d));
     return `<tr>
       <td style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:500">${d.name}</td>
       <td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text2)">${d.pic_name||'-'}</td>
@@ -2457,11 +2476,11 @@ async function loadAdvList() {
         ${d.pic_phone ? `<a href="https://wa.me/${d.pic_phone.replace(/\D/g,'')}" target="_blank" style="color:#22d3a0;text-decoration:none">${d.pic_phone}</a>` : '-'}
       </td>
       <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
-        <div style="display:flex;flex-wrap:wrap;gap:3px">${accNames || '<span style="color:var(--text3);font-size:12px">-</span>'}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${accNames||'<span style="color:var(--text3);font-size:12px">-</span>'}</div>
       </td>
       <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
         <div style="display:flex;gap:6px">
-          <button onclick="openAdvModal(JSON.parse(decodeURIComponent('${safeD}')))" class="action-btn">Edit</button>
+          <button onclick="openAdvModal(window._advData['${d.id}'])" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-family:var(--sans)">Edit</button>
           <button onclick="deleteAdv('${d.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer;font-family:var(--sans)">Hapus</button>
         </div>
       </td>
@@ -2527,17 +2546,33 @@ async function loadAccList() {
   const tbody = document.getElementById('acc-tbody');
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text2)">Memuat...</td></tr>';
-  const { data, error } = await sb.from('ad_accounts').select('*, advertisers(name)').eq('user_id', currentUser?.id).order('account_name');
-  if (error) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:#f75c5c">${error.message}</td></tr>`; return; }
-  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Belum ada ad account.</td></tr>'; return; }
+  
+  if (!currentUser) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text2)">Login dulu</td></tr>'; return; }
+  
+  const { data, error } = await sb.from('ad_accounts').select('*').eq('user_id', currentUser.id).order('account_name');
+  
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:#f75c5c">Error: ${error.message}</td></tr>`;
+    return;
+  }
+  if (!data?.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Belum ada ad account. Klik "+ Tambah Ad Account"</td></tr>';
+    return;
+  }
+
+  // Ambil nama advertiser secara terpisah
+  const { data: advData } = await sb.from('advertisers').select('id,name').eq('user_id', currentUser.id);
+  const advMap = {};
+  (advData||[]).forEach(a => advMap[a.id] = a.name);
+
   tbody.innerHTML = data.map(d => `
     <tr>
-      <td style="font-family:var(--mono);font-size:12px">${d.ad_account_id}</td>
-      <td style="font-weight:500">${d.account_name}</td>
-      <td>${d.advertisers?.name || '<span style="color:var(--text3)">Belum assign</span>'}</td>
-      <td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px">${d.ad_account_id||'-'}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:500">${d.account_name||'-'}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border)">${d.advertiser_id ? (advMap[d.advertiser_id]||'Tidak dikenal') : '<span style="color:var(--text3)">Belum assign</span>'}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
         <div style="display:flex;gap:6px">
-          <button onclick="openAccModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" class="action-btn">Edit</button>
+          <button onclick="openAccModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-family:var(--sans)">Edit</button>
           <button onclick="deleteAcc('${d.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer;font-family:var(--sans)">Hapus</button>
         </div>
       </td>
@@ -2696,6 +2731,11 @@ function showView(view) {
     const el = document.getElementById('nav-'+v);
     if (el) el.classList.remove('active');
   });
+
+  // Sembunyikan platform bar untuk view non-dashboard
+  const platformBar = document.querySelector('.platform-bar');
+  const isDash = view === 'dashboard';
+  if (platformBar) platformBar.style.display = isDash ? '' : 'none';
 
   if (view === 'dashboard') {
     document.getElementById('main-view').style.display = 'block';
