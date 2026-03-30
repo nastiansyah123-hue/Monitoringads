@@ -194,7 +194,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 select.btn{appearance:none;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a8099' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
 
 /* Content */
-.content{padding:22px 28px;}
+.content{padding:22px 28px;flex:1;}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
 .mc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color .15s;}
 .mc:hover{border-color:var(--border2);}
@@ -934,7 +934,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Advertiser Management -->
-    <div id="view-advertiser" style="display:none;flex-direction:column;overflow-y:auto;">
+    <div id="view-advertiser" style="display:none;flex-direction:column;flex:1;min-height:0;overflow-y:auto;">
       <div class="page-header">
         <div class="page-title">
           <h1>Advertiser</h1>
@@ -2471,11 +2471,16 @@ function showView(view) {
     document.getElementById('view-kampanye').style.display = 'flex';
     document.getElementById('nav-akun').classList.add('active');
   } else if (view === 'advertiser') {
-    document.getElementById('view-advertiser').style.display = 'flex';
+    const advView = document.getElementById('view-advertiser');
+    advView.style.display = 'flex';
+    advView.style.flexDirection = 'column';
+    advView.style.flex = '1';
     document.getElementById('nav-advertiser').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
-    loadAdvertiserList();
-    populateAccountDropdown();
+    // Pastikan advertiser-list ada sebelum load
+    const advList = document.getElementById('advertiser-list');
+    if (advList) advList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat...</div>';
+    setTimeout(() => { loadAdvertiserList(); populateAccountDropdown(); }, 50);
   }
   window.scrollTo(0, 0);
 }
