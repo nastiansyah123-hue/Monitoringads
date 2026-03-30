@@ -86,16 +86,43 @@
   --red:#f75c5c; --red-bg:rgba(247,92,92,0.1); --red-text:#f75c5c;
 }
 body.light {
-  --bg:#f4f5f7; --surface:#ffffff; --surface2:#f0f1f4; --surface3:#e4e6eb;
-  --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.14);
-  --text:#111827; --text2:#6b7280; --text3:#9ca3af;
-  --meta-bg:rgba(24,119,242,0.08); --meta-text:#1a56db;
-  --google-bg:rgba(234,67,53,0.08); --google-text:#c0392b;
-  --tiktok-bg:rgba(0,0,0,0.06); --tiktok-text:#374151;
-  --green-bg:rgba(34,197,94,0.1); --green-text:#15803d;
-  --amber-bg:rgba(245,158,11,0.1); --amber-text:#b45309;
-  --red-bg:rgba(239,68,68,0.1); --red-text:#b91c1c;
+  --bg:#eef0f4; --surface:#ffffff; --surface2:#f5f6f8; --surface3:#e8eaee;
+  --border:rgba(0,0,0,0.1); --border2:rgba(0,0,0,0.18);
+  --text:#1a1d23; --text2:#52576b; --text3:#9098b0;
+  --meta-bg:rgba(24,119,242,0.1); --meta-text:#1547b8;
+  --google-bg:rgba(234,67,53,0.1); --google-text:#b83223;
+  --tiktok-bg:rgba(0,0,0,0.07); --tiktok-text:#2d3348;
+  --green-bg:rgba(16,185,129,0.1); --green-text:#0d7a56;
+  --amber-bg:rgba(217,119,6,0.1); --amber-text:#92580a;
+  --red-bg:rgba(220,38,38,0.1); --red-text:#991b1b;
 }
+body.light .sidebar { background:#ffffff; box-shadow:2px 0 8px rgba(0,0,0,0.06); }
+body.light .page-header { background:#ffffff; }
+body.light .mc { background:#f5f6f8; }
+body.light .card { background:#ffffff; box-shadow:0 1px 4px rgba(0,0,0,0.07); }
+body.light .table-card { background:#ffffff; box-shadow:0 1px 4px rgba(0,0,0,0.07); }
+body.light th { color:#52576b; }
+body.light td { color:#1a1d23; }
+body.light tr:hover td { background:#f5f6f8; }
+body.light .platform-bar { background:#ffffff; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+body.light .btn { background:#ffffff; color:#1a1d23; }
+body.light .btn:hover { background:#f5f6f8; }
+body.light .date-dropdown { background:#ffffff; box-shadow:0 4px 20px rgba(0,0,0,0.12); }
+body.light .date-preset { color:#52576b; }
+body.light .date-preset:hover { background:#f5f6f8; color:#1a1d23; }
+body.light .login-screen { background:#eef0f4; }
+body.light .login-box .login-input { background:#ffffff; border-color:rgba(0,0,0,0.18); color:#1a1d23; }
+body.light .api-panel { background:#f5f6f8; }
+body.light .modal { background:#ffffff; }
+body.light .pb-card { background:#ffffff; }
+body.light .pb-metric { background:#f5f6f8; }
+body.light .nav-item { color:#52576b; }
+body.light .nav-item:hover { background:#f5f6f8; color:#1a1d23; }
+body.light .welcome-screen { background:#eef0f4; }
+body.light .wp-card { background:#ffffff; }
+body.light .badge-active { background:rgba(16,185,129,0.12); color:#0d7a56; }
+body.light .badge-paused { background:rgba(217,119,6,0.12); color:#92580a; }
+body.light .badge-ended { background:rgba(0,0,0,0.07); color:#52576b; }
 /* Theme toggle */
 .theme-toggle{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;width:100%;border:none;background:none;color:var(--text2);font-family:var(--sans);font-size:13px;transition:all .15s;}
 .theme-toggle:hover{background:var(--surface2);color:var(--text);}
@@ -281,8 +308,52 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 th:hover .sort-icon{opacity:1;}
 th.sort-active{color:var(--text);}
 th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
-@media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr);}.platform-breakdown{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.api-panel-inner{grid-template-columns:1fr;}}
-@media(max-width:700px){.sidebar{display:none;}}
+
+/* Mobile nav bottom bar */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:100;padding:6px 0;}
+.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center;}
+.mobile-nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text2);font-family:var(--sans);font-size:10px;padding:6px 12px;border-radius:8px;transition:all .15s;}
+.mobile-nav-btn.active{color:#4f8ef7;}
+.mobile-nav-btn svg{width:20px;height:20px;}
+.mobile-header{display:none;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
+.mobile-header-logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;}
+.mobile-header-logo span{color:#4f8ef7;}
+
+@media(max-width:900px){
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .platform-breakdown{grid-template-columns:1fr 1fr;}
+  .grid2{grid-template-columns:1fr;}
+  .api-panel-inner{grid-template-columns:1fr;}
+}
+@media(max-width:700px){
+  .sidebar{display:none;}
+  .mobile-nav{display:block;}
+  .mobile-header{display:flex;}
+  .layout{height:auto;overflow:visible;}
+  .main{overflow-y:visible;}
+  .platform-bar{padding:10px 14px;gap:7px;overflow-x:auto;flex-wrap:nowrap;}
+  .platform-btn{flex-shrink:0;padding:6px 12px;font-size:12px;}
+  .page-header{padding:14px 16px;flex-direction:column;align-items:flex-start;gap:10px;}
+  .header-actions{width:100%;justify-content:flex-start;}
+  .date-trigger{min-width:0;font-size:12px;}
+  .date-dropdown{width:calc(100vw - 28px);right:0;left:0;margin:0 14px;}
+  .content{padding:14px 16px 80px;}
+  .metrics{grid-template-columns:1fr 1fr;gap:10px;}
+  .platform-breakdown{grid-template-columns:1fr;}
+  .grid2{grid-template-columns:1fr;gap:12px;}
+  .table-wrap{overflow-x:auto;}
+  table{min-width:600px;}
+  .mc-val{font-size:20px;}
+  .adv-name{font-size:12px;}
+  .adv-id{display:none;}
+  .card{padding:14px;}
+  .login-box{max-width:100%;}
+  .welcome-box{max-width:100%;}
+  .platform-cards-grid{grid-template-columns:1fr;}
+  .api-panel-inner{grid-template-columns:1fr;}
+  .modal{width:calc(100vw - 28px);margin:0 14px;}
+  #date-picker-wrap-akun .date-dropdown,#date-picker-wrap-kamp .date-dropdown{width:calc(100vw - 28px);}
+}
 </style>
 </head>
 <body>
@@ -436,6 +507,22 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
   </aside>
 
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <div class="mobile-header-logo">
+      <div class="logo-icon" style="width:28px;height:28px;"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:white"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg></div>
+      Ad<span>Monitor</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="padding:6px 10px;font-size:12px;" onclick="toggleTheme()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+      </button>
+      <button class="btn" style="padding:6px 10px;font-size:12px;" onclick="doLogout()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+      </button>
+    </div>
+  </div>
+
   <div class="main">
 
     <!-- Platform selector bar -->
@@ -569,6 +656,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
                 </div>
                 <div id="date-range-info" style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)"></div>
               </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:12px" onclick="applyDateAndRefresh()">Terapkan</button>
             </div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="applyDateAndRefresh()">
@@ -622,9 +710,26 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
           </div>
           <div class="card">
             <div class="card-head">
-              <div class="card-title">CTR per platform</div>
+              <div class="card-title">Top advertiser by</div>
+              <div style="display:flex;gap:6px;">
+                <button class="pill active" id="sort-by-spend" onclick="setSortBy('spend',this)" style="font-size:10px;padding:3px 10px;">Spend</button>
+                <button class="pill" id="sort-by-leads" onclick="setSortBy('leads',this)" style="font-size:10px;padding:3px 10px;">Hasil</button>
+                <button class="pill" id="sort-by-cpr" onclick="setSortBy('cpr',this)" style="font-size:10px;padding:3px 10px;">CPR</button>
+              </div>
             </div>
-            <div class="chart-wrap" style="height:190px"><canvas id="ctrChart"></canvas></div>
+            <div id="top-adv-table" style="overflow-y:auto;max-height:190px;">
+              <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);">#</th>
+                    <th style="text-align:left;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);">Akun</th>
+                    <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);" id="top-col-label">Spend</th>
+                    <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);">Hasil</th>
+                  </tr>
+                </thead>
+                <tbody id="top-adv-body"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -797,6 +902,13 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 </div>
 
 <script>
+function setMobileNav(active) {
+  ['dashboard','akun','config','platform'].forEach(v => {
+    const el = document.getElementById('mob-'+v);
+    if (el) el.classList.toggle('active', v===active);
+  });
+}
+
 // ── Theme Toggle ─────────────────────────────────────────────────
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light');
@@ -1332,22 +1444,50 @@ function renderSpendChart(data) {
   });
 }
 
-function renderCtrChart(data) {
-  destroyChart('ctr');
-  const byPlatform = ['meta','google','tiktok'].map(p => {
-    const d = data.filter(a=>a.platform===p);
-    return d.length ? +(d.reduce((s,a)=>s+a.ctr,0)/d.length).toFixed(2) : 0;
-  });
-  const pColors = ['#1877F2','#EA4335','#cccccc'];
-  charts['ctr'] = new Chart(document.getElementById('ctrChart'), {
-    type:'bar',
-    data:{labels:['Meta Ads','Google Ads','TikTok Ads'],
-      datasets:[{data:byPlatform,backgroundColor:pColors.map(c=>c+'40'),borderColor:pColors,borderWidth:1.5,borderRadius:6,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:{color:'#4a5068',font:{size:11}}},
-        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5068',font:{size:11},callback:v=>v+'%'}}}}
-  });
+let topAdvSortBy = 'spend';
+
+function setSortBy(by, el) {
+  topAdvSortBy = by;
+  document.querySelectorAll('#sort-by-spend,#sort-by-leads,#sort-by-cpr').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const labels = { spend:'Spend', leads:'Hasil', cpr:'CPR' };
+  document.getElementById('top-col-label').textContent = labels[by];
+  renderTopAdvTable(ALL_DATA);
 }
+
+function renderTopAdvTable(data) {
+  const sorted = [...data]
+    .filter(a => a.spend > 0 || (a.leads||0) > 0)
+    .sort((a,b) => {
+      if (topAdvSortBy === 'spend') return (b.spend||0) - (a.spend||0);
+      if (topAdvSortBy === 'leads') return (b.leads||0) - (a.leads||0);
+      if (topAdvSortBy === 'cpr') {
+        const ca = a.leads>0 ? a.spend/a.leads : 999999;
+        const cb = b.leads>0 ? b.spend/b.leads : 999999;
+        return ca - cb;
+      }
+      return 0;
+    })
+    .slice(0, 10);
+
+  const pColor = { meta:'#1877F2', google:'#EA4335', tiktok:'#888' };
+  document.getElementById('top-adv-body').innerHTML = sorted.map((a,i) => {
+    const val = topAdvSortBy === 'spend' ? fmtRp(a.spend)
+      : topAdvSortBy === 'leads' ? (a.leads||0).toLocaleString('id-ID')
+      : (a.leads||0)>0 ? fmtRp(Math.round(a.spend/a.leads)) : '–';
+    return `<tr>
+      <td style="padding:7px 8px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--border)">${i+1}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.name}</div>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:6px;height:6px;border-radius:50%;background:${pColor[a.platform]||'#888'};flex-shrink:0"></div><span style="font-size:10px;color:var(--text3)">${a.platform==='meta'?'Meta':a.platform==='google'?'Google':'TikTok'}</span></div>
+      </td>
+      <td style="padding:7px 8px;font-size:12px;font-family:var(--mono);text-align:right;border-bottom:1px solid var(--border);color:${i===0?'#4f8ef7':'var(--text)'}">${val}</td>
+      <td style="padding:7px 8px;font-size:12px;font-family:var(--mono);text-align:right;border-bottom:1px solid var(--border)">${(a.leads||0).toLocaleString('id-ID')}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3)">Tidak ada data</td></tr>';
+}
+
+function renderCtrChart(data) { renderTopAdvTable(data); }
 
 function renderTable(data) {
   const sorted = getSorted(data);
@@ -1957,5 +2097,26 @@ if (checkSession()) {
   setTimeout(() => document.getElementById('login-user').focus(), 100);
 }
 </script>
+<!-- Mobile Bottom Nav -->
+<div class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <button class="mobile-nav-btn active" id="mob-dashboard" onclick="showView('dashboard');setMobileNav('dashboard')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      Dashboard
+    </button>
+    <button class="mobile-nav-btn" id="mob-akun" onclick="showView('akun');setMobileNav('akun')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      Akun
+    </button>
+    <button class="mobile-nav-btn" id="mob-config" onclick="toggleApiPanel();setMobileNav('config')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      API
+    </button>
+    <button class="mobile-nav-btn" id="mob-platform" onclick="backToWelcome()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+      Platform
+    </button>
+  </div>
+</div>
 </body>
 </html>
