@@ -1355,12 +1355,12 @@ function renderAkun(data) {
               <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtRp(a.spend)}</div>
             </div>
             <div style="background:var(--surface2);border-radius:6px;padding:8px">
-              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">CPR</div>
-              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${a.leads>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</div>
-            </div>
-            <div style="background:var(--surface2);border-radius:6px;padding:8px">
               <div style="font-size:10px;color:var(--text2);margin-bottom:3px">Lead</div>
               <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0).toLocaleString('id-ID')}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:8px">
+              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">CPR</div>
+              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0)>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:10px;gap:6px">
@@ -1419,16 +1419,20 @@ async function fetchKampanyeMeta(adv) {
     // Fetch insights per kampanye secara paralel
     const withInsights = await Promise.all(campaigns.map(async c => {
       try {
-        const ri = await fetch(`https://graph.facebook.com/v19.0/${c.id}/insights?access_token=${token}&fields=spend,clicks,impressions,purchase_roas,ctr&time_range={"since":"${since}","until":"${until}"}`);
+        const ri = await fetch(`https://graph.facebook.com/v19.0/${c.id}/insights?access_token=${token}&fields=spend,clicks,impressions,actions&time_range={"since":"${since}","until":"${until}"}`);
         const di = await ri.json();
         const row = di.data?.[0];
+        const actions = row?.actions || [];
+        const leadAction = actions.find(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
+        const leads = parseInt(leadAction?.value || 0);
         return {
           ...c,
           spend: parseFloat(row?.spend || 0),
           clicks: parseInt(row?.clicks || 0),
           imp: parseInt(row?.impressions || 0),
-          ctr: parseFloat(row?.ctr || 0),
-          roas: parseFloat(row?.purchase_roas?.[0]?.value || 0),
+          ctr: 0,
+          roas: 0,
+          leads,
         };
       } catch(e) { return { ...c, spend:0, clicks:0, imp:0, ctr:0, roas:0 }; }
     }));
@@ -1470,10 +1474,10 @@ function renderKampanye(campaigns, adv) {
 
 function renderKampanyaDummy(adv) {
   const dummy = [
-    { name:'Brand Awareness', objective:'BRAND_AWARENESS', status:'ACTIVE', spend:adv.spend*0.35, ctr:adv.ctr*1.1, roas:adv.roas*1.2, imp:adv.imp*0.4, clicks:Math.round(adv.imp*0.4*adv.ctr/100) },
-    { name:'Performance Max', objective:'CONVERSIONS', status:'ACTIVE', spend:adv.spend*0.28, ctr:adv.ctr*0.95, roas:adv.roas*0.9, imp:adv.imp*0.3, clicks:Math.round(adv.imp*0.3*adv.ctr/100) },
-    { name:'Remarketing', objective:'RETARGETING', status:'ACTIVE', spend:adv.spend*0.22, ctr:adv.ctr*1.3, roas:adv.roas*1.4, imp:adv.imp*0.2, clicks:Math.round(adv.imp*0.2*adv.ctr/100) },
-    { name:'Discovery Ads', objective:'REACH', status:'PAUSED', spend:adv.spend*0.15, ctr:adv.ctr*0.8, roas:adv.roas*0.75, imp:adv.imp*0.1, clicks:Math.round(adv.imp*0.1*adv.ctr/100) },
+    { name:'Brand Awareness', objective:'BRAND_AWARENESS', status:'ACTIVE', spend:adv.spend*0.35, leads:Math.round(adv.spend*0.35/45000), ctr:adv.ctr*1.1, roas:0, imp:adv.imp*0.4, clicks:Math.round(adv.imp*0.4*adv.ctr/100) },
+    { name:'Performance Max', objective:'CONVERSIONS', status:'ACTIVE', spend:adv.spend*0.28, leads:Math.round(adv.spend*0.28/38000), ctr:adv.ctr*0.95, roas:0, imp:adv.imp*0.3, clicks:Math.round(adv.imp*0.3*adv.ctr/100) },
+    { name:'Remarketing', objective:'RETARGETING', status:'ACTIVE', spend:adv.spend*0.22, leads:Math.round(adv.spend*0.22/32000), ctr:adv.ctr*1.3, roas:0, imp:adv.imp*0.2, clicks:Math.round(adv.imp*0.2*adv.ctr/100) },
+    { name:'Discovery Ads', objective:'REACH', status:'PAUSED', spend:adv.spend*0.15, leads:0, ctr:adv.ctr*0.8, roas:0, imp:adv.imp*0.1, clicks:Math.round(adv.imp*0.1*adv.ctr/100) },
   ];
   renderKampanye(dummy, adv);
 }
