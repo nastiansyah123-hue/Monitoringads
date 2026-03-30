@@ -365,30 +365,63 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       <div class="login-logo-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg></div>
       <div class="login-logo-name">Ad<span>Monitor</span></div>
     </div>
-    <div class="login-title">Selamat datang</div>
-    <div class="login-sub">Masuk dengan akun yang sudah didaftarkan admin</div>
-    <div class="login-field">
-      <label class="login-label">Email</label>
-      <input class="login-input" type="email" id="login-user" placeholder="email@herbaljaya.com" onkeydown="if(event.key==='Enter')doLogin()">
+
+    <!-- Tab switcher -->
+    <div style="display:flex;gap:0;margin-bottom:24px;border-radius:10px;background:var(--surface2);padding:4px;">
+      <button id="tab-login" onclick="switchTab('login')" style="flex:1;font-family:var(--sans);font-size:13px;font-weight:500;padding:8px;border-radius:7px;border:none;background:#4f8ef7;color:white;cursor:pointer;transition:all .15s;">Masuk</button>
+      <button id="tab-daftar" onclick="switchTab('daftar')" style="flex:1;font-family:var(--sans);font-size:13px;font-weight:500;padding:8px;border-radius:7px;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:all .15s;">Daftar</button>
     </div>
-    <div class="login-field">
-      <label class="login-label">Password</label>
-      <div style="position:relative">
-        <input class="login-input" type="password" id="login-pass" placeholder="Masukkan password" onkeydown="if(event.key==='Enter')doLogin()">
-        <button onclick="togglePass()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);padding:0">
-          <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-        </button>
+
+    <!-- Form Login -->
+    <div id="form-login">
+      <div class="login-field">
+        <label class="login-label">Email</label>
+        <input class="login-input" type="email" id="login-user" placeholder="email@herbaljaya.com" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Password</label>
+        <div style="position:relative">
+          <input class="login-input" type="password" id="login-pass" placeholder="Masukkan password" onkeydown="if(event.key==='Enter')doLogin()">
+          <button onclick="togglePass()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);padding:0">
+            <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="login-error" id="login-error"></div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()">Masuk</button>
+      <div style="text-align:center;margin-top:10px">
+        <button onclick="doForgotPassword()" style="background:none;border:none;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--sans);">Lupa password?</button>
       </div>
     </div>
-    <div class="login-error" id="login-error"></div>
-    <button class="login-btn" id="login-btn" onclick="doLogin()">Masuk</button>
-    <div id="forgot-wrap" style="text-align:center;margin-top:10px">
-      <button onclick="doForgotPassword()" style="background:none;border:none;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--sans);">Lupa password?</button>
+
+    <!-- Form Daftar -->
+    <div id="form-daftar" style="display:none">
+      <div class="login-field">
+        <label class="login-label">Nama lengkap</label>
+        <input class="login-input" type="text" id="daftar-name" placeholder="Nama kamu">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Email</label>
+        <input class="login-input" type="email" id="daftar-email" placeholder="email@herbaljaya.com">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Password</label>
+        <input class="login-input" type="password" id="daftar-pass" placeholder="Minimal 6 karakter">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Konfirmasi password</label>
+        <input class="login-input" type="password" id="daftar-pass2" placeholder="Ulangi password">
+      </div>
+      <div class="login-error" id="daftar-error"></div>
+      <button class="login-btn" id="daftar-btn" onclick="doDaftar()">Kirim Permintaan Akses</button>
+      <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text2);line-height:1.6;">
+        Setelah mendaftar, akun kamu perlu disetujui admin sebelum bisa masuk. Kamu akan mendapat email konfirmasi.
+      </div>
     </div>
+
     <div class="login-divider"></div>
     <div class="login-footer">
-      AdMonitor · Herbal Jaya &copy; 2025<br>
-      <span style="color:var(--text3)">Hubungi admin untuk mendapatkan akses</span>
+      AdMonitor · Herbal Jaya &copy; 2025
     </div>
   </div>
 </div>
@@ -947,6 +980,59 @@ if (savedTheme === 'light') {
 }
 
 // ── Auth System ─────────────────────────────────────────────────
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('form-login').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('form-daftar').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('tab-login').style.background = isLogin ? '#4f8ef7' : 'transparent';
+  document.getElementById('tab-login').style.color = isLogin ? 'white' : 'var(--text2)';
+  document.getElementById('tab-daftar').style.background = isLogin ? 'transparent' : '#4f8ef7';
+  document.getElementById('tab-daftar').style.color = isLogin ? 'var(--text2)' : 'white';
+}
+
+async function doDaftar() {
+  const name = document.getElementById('daftar-name').value.trim();
+  const email = document.getElementById('daftar-email').value.trim();
+  const pass = document.getElementById('daftar-pass').value;
+  const pass2 = document.getElementById('daftar-pass2').value;
+  const errEl = document.getElementById('daftar-error');
+  const btn = document.getElementById('daftar-btn');
+
+  errEl.style.color = '#f75c5c';
+  if (!name) { errEl.textContent = 'Nama wajib diisi'; return; }
+  if (!email) { errEl.textContent = 'Email wajib diisi'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Password minimal 6 karakter'; return; }
+  if (pass !== pass2) { errEl.textContent = 'Password tidak cocok'; return; }
+
+  btn.disabled = true; btn.textContent = 'Mengirim...';
+
+  const { data, error } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { name, role: 'viewer', approved: false } }
+  });
+
+  if (error) {
+    errEl.textContent = error.message;
+    btn.disabled = false; btn.textContent = 'Kirim Permintaan Akses';
+    return;
+  }
+
+  // Simpan ke tabel pending_users untuk notifikasi admin
+  await sb.from('pending_users').insert({
+    email, name,
+    user_id: data.user?.id,
+    requested_at: new Date().toISOString()
+  }).then(() => {}).catch(() => {});
+
+  errEl.style.color = '#22d3a0';
+  errEl.textContent = 'Permintaan terkirim! Tunggu persetujuan admin — kamu akan mendapat email konfirmasi.';
+  btn.textContent = 'Terkirim';
+  document.getElementById('daftar-name').value = '';
+  document.getElementById('daftar-email').value = '';
+  document.getElementById('daftar-pass').value = '';
+  document.getElementById('daftar-pass2').value = '';
+}
+
 // ── Supabase Setup ────────────────────────────────────────────────
 const SUPABASE_URL = 'https://ibokbgpnmwthmbfdvyxt.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlib2tiZ3BubXd0aG1iZmR2eXh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTgwMzQsImV4cCI6MjA5MDQzNDAzNH0.Df-6kvafuO-nQViUX6Tww-F3P9oRQpod9DtVADP88QM';
