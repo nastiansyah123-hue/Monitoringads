@@ -1098,23 +1098,28 @@ async function doLogout() {
 // ── Supabase Config per User ──────────────────────────────────────
 async function loadUserConfig() {
   if (!currentUser) return;
-  const { data, error } = await sb.from('user_config').select('*').eq('user_id', currentUser.id).single();
-  if (error || !data) return;
-  // Isi apiConfig dari Supabase
-  if (data.meta_token) {
-    apiConfig.meta = { token: data.meta_token, bizId: data.meta_biz_id || '' };
+  try {
+    const { data, error } = await sb.from('user_config').select('*').eq('user_id', currentUser.id).single();
+    if (error || !data) return;
+
+    // Isi apiConfig dari Supabase
+    if (data.meta_token) apiConfig.meta = { token: data.meta_token, bizId: data.meta_biz_id || '' };
+    if (data.google_token) apiConfig.google = { token: data.google_token, mccId: data.google_mcc_id || '' };
+    if (data.tiktok_token) apiConfig.tiktok = { token: data.tiktok_token, advId: data.tiktok_adv_id || '' };
+
+    // Platform dari Supabase — update welcomeSelected langsung
+    if (data.platforms?.length) {
+      welcomeSelected.clear();
+      data.platforms.forEach(p => welcomeSelected.add(p));
+      localStorage.setItem('admonitor_platforms', JSON.stringify(data.platforms));
+    }
+
+    localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+  } catch(e) {
+    // Fallback ke localStorage jika Supabase gagal
+    console.warn('Supabase load failed, using localStorage cache');
   }
-  if (data.google_token) {
-    apiConfig.google = { token: data.google_token, mccId: data.google_mcc_id || '' };
-  }
-  if (data.tiktok_token) {
-    apiConfig.tiktok = { token: data.tiktok_token, advId: data.tiktok_adv_id || '' };
-  }
-  // Platform dari Supabase
-  if (data.platforms?.length) {
-    localStorage.setItem('admonitor_platforms', JSON.stringify(data.platforms));
-  }
-  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+  await loadManualLimits();
 }
 
 async function saveUserConfig() {
@@ -1152,16 +1157,21 @@ function initApp() {
   const roleEl = document.querySelector('.avatar-info span');
   const avatarEl = document.querySelector('.avatar');
   const email = currentUser?.email || '';
-  const name = email.split('@')[0];
+  const name = currentUser?.user_metadata?.name || email.split('@')[0];
   if (nameEl) nameEl.textContent = name;
   if (roleEl) roleEl.textContent = currentUser?.user_metadata?.role || 'User';
   if (avatarEl) avatarEl.textContent = name.slice(0,2).toUpperCase();
 
-  // Cek apakah sudah pernah pilih platform
-  const savedPlatforms = localStorage.getItem('admonitor_platforms');
-  if (savedPlatforms) {
-    const parsed = JSON.parse(savedPlatforms);
-    parsed.forEach(p => welcomeSelected.add(p));
+  // welcomeSelected sudah diisi oleh loadUserConfig dari Supabase
+  // Fallback ke localStorage jika Supabase tidak ada data
+  if (welcomeSelected.size === 0) {
+    const savedPlatforms = localStorage.getItem('admonitor_platforms');
+    if (savedPlatforms) {
+      JSON.parse(savedPlatforms).forEach(p => welcomeSelected.add(p));
+    }
+  }
+
+  if (welcomeSelected.size > 0) {
     document.getElementById('welcome-screen').classList.add('hidden');
     document.getElementById('app-layout').style.display = 'flex';
     applyPlatformSelection();
@@ -1171,7 +1181,6 @@ function initApp() {
     initDatePicker();
     renderAll();
     if (isConnected('meta') && welcomeSelected.has('meta')) {
-      // Coba load cache dulu untuk tampilkan data langsung
       const cached = loadMetaCache();
       if (cached && cached.length) {
         const nonMeta = ALL_DATA.filter(a => a.platform !== 'meta');
@@ -1182,24 +1191,18 @@ function initApp() {
         renderAll();
         document.getElementById('last-update').textContent = 'Meta: dari cache · Memuat data terbaru...';
       }
-      // Fetch data terbaru dari API
       fetchAllMetaAccounts(apiConfig.meta.token)
         .then(accounts => {
-          if (accounts.length) {
-            cachedMetaAccounts = accounts;
-            fetchAndRenderMeta(accounts);
-          }
+          if (accounts.length) { cachedMetaAccounts = accounts; fetchAndRenderMeta(accounts); }
         })
         .catch(err => {
           const msg = err.message || '';
           const isExpired = msg.includes('190') || msg.includes('expired') || msg.includes('Invalid OAuth');
-          if (isExpired || cached) {
-            showTokenAlert(isExpired);
-          }
+          if (isExpired || cached) showTokenAlert(isExpired);
         });
     }
   } else {
-    // Tampilkan welcome screen
+    // Belum pilih platform — tampilkan welcome screen
     document.getElementById('welcome-screen').classList.remove('hidden');
     ['meta','google','tiktok'].forEach(p => {
       const el = document.getElementById('wp-'+p+'-conn');
@@ -1433,7 +1436,7 @@ async function testConnections() {
 
 async function fetchAllMetaAccounts(token) {
   let all = [];
-  let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status,spend_cap,amount_spent,currency,balance,funding_source_details&limit=200`;
+  let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status,spend_cap,amount_spent,currency,balance&limit=200`;
   while (url) {
     const r = await fetch(url);
     const d = await r.json();
@@ -1798,6 +1801,45 @@ function setFilter(el, f) {
 
 function filterTable() { renderTable(getFiltered()); }
 
+// ── Manual Limits ─────────────────────────────────────────────────
+let manualLimits = JSON.parse(localStorage.getItem('admonitor_limits') || '{}');
+
+function toggleEditLimit(id) {
+  const edit = document.getElementById('limit-edit-'+id);
+  const display = document.getElementById('limit-display-'+id);
+  if (!edit) return;
+  const isOpen = edit.style.display !== 'none';
+  edit.style.display = isOpen ? 'none' : 'block';
+}
+
+async function saveManualLimit(id) {
+  const input = document.getElementById('limit-input-'+id);
+  const val = parseFloat(input.value.replace(/\D/g,''));
+  if (!val || val <= 0) { alert('Masukkan angka yang valid'); return; }
+  manualLimits[id] = val;
+  localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+  // Simpan ke Supabase jika login
+  if (currentUser) {
+    await sb.from('account_limits').upsert({
+      user_id: currentUser.id,
+      account_id: id,
+      limit_amount: val,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,account_id' }).catch(()=>{});
+  }
+  // Re-render kartu akun
+  renderAkun(ALL_DATA);
+}
+
+async function loadManualLimits() {
+  if (!currentUser) return;
+  const { data } = await sb.from('account_limits').select('account_id,limit_amount').eq('user_id', currentUser.id).catch(()=>({data:null}));
+  if (data?.length) {
+    data.forEach(r => { manualLimits[r.account_id] = r.limit_amount; });
+    localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+  }
+}
+
 // ── Sort ──────────────────────────────────────────────────────────
 let sortCol = 'spend';
 let sortDir = 'desc';
@@ -1971,32 +2013,33 @@ function renderAkun(data) {
               <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0)>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</div>
             </div>
           </div>
-          ${a.jangkauanSaldo > 0 ? `
-          <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;border-left:3px solid ${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'}">
+          <!-- Budget Manual -->
+          <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span style="font-size:10px;font-weight:500;color:var(--text2)">Saldo Tertunggak</span>
-              <span style="font-size:11px;font-family:var(--mono);color:${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'var(--text)'};font-weight:500">${fmtRp(a.saldoTertunggak)}</span>
+              <span style="font-size:10px;font-weight:500;color:var(--text2)">Jangkauan Saldo</span>
+              <button onclick="toggleEditLimit('${a.id}')" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans)">Edit</button>
             </div>
-            <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">
-              <div style="height:100%;width:${a.budget}%;border-radius:3px;background:${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'};transition:width .3s"></div>
+            <div id="limit-display-${a.id}">
+              ${manualLimits[a.id] > 0 ? `
+                <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">
+                  <div style="height:100%;width:${Math.min(100,Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100))}%;border-radius:3px;background:${Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=90?'#f75c5c':Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=70?'#f5a623':'#22d3a0'}"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
+                  <span style="color:var(--text2)">Sisa: <span style="color:${Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=90?'#f75c5c':Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=70?'#f5a623':'#22d3a0'};font-weight:500">${fmtRp(Math.max(0,manualLimits[a.id]-(a.amountSpentRp||a.spend)))}</span></span>
+                  <span style="color:var(--text3)">Limit: ${fmtRp(manualLimits[a.id])}</span>
+                </div>
+                <div style="font-size:10px;color:var(--text3);margin-top:3px">${Math.min(100,Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100))}% terpakai · Saldo: ${fmtRp(a.amountSpentRp||a.spend)}</div>
+              ` : `<div style="font-size:11px;color:var(--text3)">Belum diset — klik Edit untuk input jangkauan saldo</div>`}
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
-              <span style="color:var(--text2)">Sisa: <span style="color:${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'};font-weight:500">${fmtRp(a.sisaBudget)}</span></span>
-              <span style="color:var(--text3)">Limit: ${fmtRp(a.jangkauanSaldo)}</span>
+            <div id="limit-edit-${a.id}" style="display:none;margin-top:6px">
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="number" id="limit-input-${a.id}" placeholder="Contoh: 772664" value="${manualLimits[a.id]||''}"
+                  style="font-family:var(--mono);font-size:11px;padding:5px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--text);flex:1;min-width:0">
+                <button onclick="saveManualLimit('${a.id}')" style="font-size:11px;padding:5px 12px;border-radius:6px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);flex-shrink:0">Simpan</button>
+              </div>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">Input dalam Rupiah penuh. Contoh: 772664 = Rp772.664</div>
             </div>
-            <div style="margin-top:5px;font-size:10px;color:var(--text3)">${a.budget}% dari jangkauan saldo terpakai</div>
-          </div>` : a.spendCap > 0 ? `
-          <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;border-left:3px solid ${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'}">
-            <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-              <span style="font-size:10px;color:var(--text2)">Account Spending Limit</span>
-              <span style="font-size:10px;font-family:var(--mono);color:${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'var(--text)'}">${a.budget}%</span>
-            </div>
-            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:5px">
-              <div style="height:100%;width:${a.budget}%;background:${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'}"></div>
-            </div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">Sisa: ${fmtRp(a.sisaBudget)} / ${fmtRp(a.spendCap)}</div>
-          </div>` : `
-          <div style="margin-top:8px;font-size:10px;color:var(--text3);text-align:center;padding:6px">Tidak ada spending limit</div>`}
+          </div>
           <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:10px;gap:6px">
             <span style="font-size:11px;color:var(--text2)">Lihat kampanye</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--text2)"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
@@ -2377,6 +2420,7 @@ function updateWelcomeHint() {
 
 function startDashboard() {
   localStorage.setItem('admonitor_platforms', JSON.stringify([...welcomeSelected]));
+  saveUserConfig(); // Simpan platform & token ke Supabase
   document.getElementById('welcome-screen').classList.add('hidden');
   document.getElementById('app-layout').style.display = 'flex';
   applyPlatformSelection();
@@ -2388,10 +2432,7 @@ function startDashboard() {
   if (isConnected('meta') && welcomeSelected.has('meta')) {
     fetchAllMetaAccounts(apiConfig.meta.token)
       .then(accounts => {
-        if(accounts.length) {
-          cachedMetaAccounts = accounts;
-          fetchAndRenderMeta(accounts);
-        }
+        if(accounts.length) { cachedMetaAccounts = accounts; fetchAndRenderMeta(accounts); }
       })
       .catch(()=>{});
   }
