@@ -330,30 +330,31 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
   .sidebar{display:none;}
   .mobile-nav{display:block;}
   .mobile-header{display:flex;}
-  .layout{height:auto;overflow:visible;}
-  .main{overflow-y:visible;}
-  .platform-bar{padding:10px 14px;gap:7px;overflow-x:auto;flex-wrap:nowrap;}
+  .layout{flex-direction:column;height:auto;overflow:visible;}
+  .main{overflow-y:visible;height:auto;}
+  .platform-bar{padding:8px 14px;gap:6px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;}
   .platform-btn{flex-shrink:0;padding:6px 12px;font-size:12px;}
-  .page-header{padding:14px 16px;flex-direction:column;align-items:flex-start;gap:10px;}
-  .header-actions{width:100%;justify-content:flex-start;}
-  .date-trigger{min-width:0;font-size:12px;}
-  .date-dropdown{width:calc(100vw - 28px);right:0;left:0;margin:0 14px;}
-  .content{padding:14px 16px 80px;}
-  .metrics{grid-template-columns:1fr 1fr;gap:10px;}
+  .page-header{padding:12px 16px;flex-direction:column;align-items:flex-start;gap:8px;}
+  .header-actions{width:100%;justify-content:flex-start;flex-wrap:wrap;gap:6px;}
+  .date-trigger{font-size:12px;padding:6px 10px;}
+  .date-dropdown{width:calc(100vw - 28px);right:auto;left:0;}
+  .content{padding:12px 14px 90px;}
+  .metrics{grid-template-columns:1fr 1fr;gap:8px;}
   .platform-breakdown{grid-template-columns:1fr;}
-  .grid2{grid-template-columns:1fr;gap:12px;}
-  .table-wrap{overflow-x:auto;}
-  table{min-width:600px;}
-  .mc-val{font-size:20px;}
-  .adv-name{font-size:12px;}
+  .grid2{grid-template-columns:1fr;gap:10px;}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{min-width:580px;}
+  .mc{padding:12px;}
+  .mc-val{font-size:18px;}
   .adv-id{display:none;}
-  .card{padding:14px;}
-  .login-box{max-width:100%;}
-  .welcome-box{max-width:100%;}
-  .platform-cards-grid{grid-template-columns:1fr;}
-  .api-panel-inner{grid-template-columns:1fr;}
-  .modal{width:calc(100vw - 28px);margin:0 14px;}
+  .card{padding:12px;}
+  .login-box{width:100%;max-width:100%;}
+  .welcome-box{width:100%;max-width:100%;}
+  .modal{width:calc(100vw - 28px);}
   #date-picker-wrap-akun .date-dropdown,#date-picker-wrap-kamp .date-dropdown{width:calc(100vw - 28px);}
+  .app-layout{padding-bottom:60px;}
+  /* Kartu akun grid 1 kolom di HP */
+  #akun-list > div{grid-template-columns:1fr!important;}
 }
 </style>
 </head>
@@ -1788,23 +1789,36 @@ function renderTable(data) {
       <td class="num">${(a.leads||0).toLocaleString('id-ID')}</td>
       <td class="num">${(a.leads||0)>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</td>
       <td class="num">${fmtImp(a.imp)}</td>
-      <td>
+      <td onclick="event.stopPropagation()">
         ${(() => {
-          const limit = manualLimits[a.id] || 0;
-          const spent = a.amountSpentRp || a.spend || 0;
-          const sisa = Math.max(0, limit - spent);
-          const pct = limit > 0 ? Math.min(100, Math.round(spent/limit*100)) : 0;
+          const cfg = manualLimits[a.id] || {};
+          const limit = cfg.limit || 0;
+          const spendSejak = cfg.spendSaatSet != null ? Math.max(0, (a.amountSpentRp||a.spend||0) - cfg.spendSaatSet) : 0;
+          const saldoTertunggak = (cfg.saldoAwal||0) + spendSejak;
+          const sisa = Math.max(0, limit - saldoTertunggak);
+          const pct = limit > 0 ? Math.min(100, Math.round(saldoTertunggak/limit*100)) : 0;
           const col = pct>=90?'#f75c5c':pct>=70?'#f5a623':'#22d3a0';
+          const spendAPI = a.amountSpentRp||a.spend||0;
           return limit > 0 ? `
-            <div style="min-width:110px">
+            <div style="min-width:130px">
               <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);margin-bottom:3px">
-                <span style="color:var(--text2)">${fmtRp(spent)}</span>
+                <span style="color:var(--text2)">Saldo: <span style="color:${col};font-weight:500">${fmtRp(saldoTertunggak)}</span></span>
                 <span style="color:${col};font-weight:500">${pct}%</span>
               </div>
               <div class="prog"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">Sisa: <span style="color:${col}">${fmtRp(sisa)}</span> / ${fmtRp(limit)}</div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Sisa: <span style="color:${col}">${fmtRp(sisa)}</span> / ${fmtRp(limit)}</div>
+              <div style="display:flex;gap:4px;margin-top:5px">
+                <input type="number" id="tbl-bayar-${a.id}" placeholder="Nominal bayar"
+                  style="font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:5px;border:1px solid var(--border2);background:var(--surface);color:var(--text);flex:1;min-width:0;width:80px">
+                <button onclick="sudahBayarTabel('${a.id}',${spendAPI})"
+                  style="font-size:10px;padding:3px 8px;border-radius:5px;border:none;background:#22d3a0;color:white;cursor:pointer;font-family:var(--sans);font-weight:500;flex-shrink:0">Bayar</button>
+              </div>
             </div>
-          ` : `<span style="font-size:11px;color:var(--text3)">Belum diset</span>`;
+          ` : `
+            <div>
+              <span style="font-size:11px;color:var(--text3)">Belum diset</span><br>
+              <button onclick="showView('akun')" style="font-size:10px;color:#4f8ef7;background:none;border:none;cursor:pointer;font-family:var(--sans);padding:0;margin-top:2px">Set limit →</button>
+            </div>`;
         })()}
       </td>
       <td><button class="action-btn" onclick="openKampanye('${a.id}')">Detail</button></td>
@@ -1830,6 +1844,25 @@ function toggleEditLimit(id) {
   if (!edit) return;
   const isOpen = edit.style.display !== 'none';
   edit.style.display = isOpen ? 'none' : 'block';
+}
+
+async function sudahBayarTabel(id, currentSpend) {
+  const input = document.getElementById('tbl-bayar-'+id);
+  const nominal = parseFloat(input?.value || 0);
+  if (!nominal || nominal <= 0) { alert('Masukkan nominal pembayaran'); return; }
+  const cfg = manualLimits[id] || {};
+  const spendSejak = cfg.spendSaatSet != null ? Math.max(0, currentSpend - cfg.spendSaatSet) : 0;
+  const saldoTertunggak = (cfg.saldoAwal||0) + spendSejak;
+  const sisaSaldo = Math.max(0, saldoTertunggak - nominal);
+  const riwayat = cfg.riwayatBayar || [];
+  riwayat.push({ nominal, tanggal: new Date().toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}) });
+  manualLimits[id] = { ...cfg, saldoAwal: sisaSaldo, spendSaatSet: currentSpend, riwayatBayar: riwayat.slice(-10) };
+  localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+  renderTable(getFiltered());
+  renderAkun(ALL_DATA);
+  if (currentUser) {
+    sb.from('account_limits').upsert({ user_id:currentUser.id, account_id:id, limit_amount:cfg.limit||0, saldo_awal:sisaSaldo, spend_saat_set:currentSpend, updated_at:new Date().toISOString() }, { onConflict:'user_id,account_id' }).catch(()=>{});
+  }
 }
 
 async function sudahBayar(id, currentSpend) {
