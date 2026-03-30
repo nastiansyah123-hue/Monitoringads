@@ -576,6 +576,8 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
               <input class="api-input" type="text" id="cfg-meta-token" placeholder="EAAxxxxxx..." oninput="saveConfig()" style="padding-right:70px;font-size:10px;letter-spacing:0.5px">
               <button onclick="toggleCfgToken('cfg-meta-token',this)" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:10px;color:var(--text2);padding:2px 6px;border-radius:4px;background:var(--surface3)">Sembunyikan</button>
             </div>
+            <textarea id="cfg-meta-token-area" placeholder="Atau paste token panjang di sini lalu klik Simpan Token..." style="font-family:var(--mono);font-size:10px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:100%;margin-top:5px;resize:vertical;min-height:50px;line-break:anywhere;word-break:break-all;"></textarea>
+            <button onclick="saveTokenFromArea()" style="font-family:var(--sans);font-size:11px;margin-top:4px;padding:5px 14px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;">Simpan Token dari area di atas</button>
           </div>
           <div class="api-field">
             <div class="api-label">Business ID <span style="font-size:10px;color:var(--text3)">(opsional)</span></div>
@@ -1178,6 +1180,21 @@ function selectPlatform(p) {
 function toggleApiPanel() {
   apiPanelOpen = !apiPanelOpen;
   document.getElementById('api-panel').classList.toggle('open', apiPanelOpen);
+}
+
+function saveTokenFromArea() {
+  const area = document.getElementById('cfg-meta-token-area');
+  const token = area.value.trim();
+  if (!token) { alert('Token kosong!'); return; }
+  // Simpan langsung ke apiConfig dan localStorage
+  if (!apiConfig.meta) apiConfig.meta = {};
+  apiConfig.meta.token = token;
+  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+  // Update input field juga
+  document.getElementById('cfg-meta-token').value = token;
+  area.value = '';
+  updateConnectionStatus();
+  document.getElementById('test-result').textContent = 'Token disimpan! Klik Test Koneksi untuk verifikasi.';
 }
 
 function toggleCfgToken(id, btn) {
