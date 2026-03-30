@@ -934,7 +934,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Advertiser Management -->
-    <div id="view-advertiser" style="display:none;flex-direction:column;overflow-y:auto;">
+    <div id="view-advertiser" style="display:none;">
       <div class="page-header">
         <div class="page-title">
           <h1>Advertiser</h1>
@@ -2473,11 +2473,10 @@ function backToWelcome() {
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
   localStorage.setItem('admonitor_last_view', view);
-  document.getElementById('main-view').style.display = 'none';
-  document.getElementById('view-akun').style.cssText = 'display:none';
-  document.getElementById('view-kampanye').style.cssText = 'display:none';
-  document.getElementById('view-advertiser').style.cssText = 'display:none';
-
+  ['main-view','view-akun','view-kampanye','view-advertiser'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
   ['dashboard','akun','advertiser'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if (el) el.classList.remove('active');
@@ -2488,15 +2487,15 @@ function showView(view) {
     document.getElementById('nav-dashboard').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
   } else if (view === 'akun') {
-    document.getElementById('view-akun').style.cssText = 'display:block;min-height:100%';
+    document.getElementById('view-akun').style.display = 'block';
     document.getElementById('nav-akun').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     renderAkun(ALL_DATA);
   } else if (view === 'kampanye') {
-    document.getElementById('view-kampanye').style.cssText = 'display:block;min-height:100%';
+    document.getElementById('view-kampanye').style.display = 'block';
     document.getElementById('nav-akun').classList.add('active');
   } else if (view === 'advertiser') {
-    document.getElementById('view-advertiser').style.cssText = 'display:block;min-height:100%';
+    document.getElementById('view-advertiser').style.display = 'block';
     document.getElementById('nav-advertiser').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadAdvertiserList();
