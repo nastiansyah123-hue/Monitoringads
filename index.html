@@ -1101,16 +1101,27 @@ async function doLogout() {
 // ── Supabase Config per User ──────────────────────────────────────
 async function loadUserConfig() {
   if (!currentUser) return;
+
+  // Load dari localStorage dulu sebagai cache cepat
+  const cachedConfig = localStorage.getItem('admonitor_config');
+  if (cachedConfig) {
+    try {
+      const cached = JSON.parse(cachedConfig);
+      if (cached.meta?.token) apiConfig.meta = cached.meta;
+      if (cached.google?.token) apiConfig.google = cached.google;
+      if (cached.tiktok?.token) apiConfig.tiktok = cached.tiktok;
+    } catch(e) {}
+  }
+
   try {
     const { data, error } = await sb.from('user_config').select('*').eq('user_id', currentUser.id).single();
     if (error || !data) return;
 
-    // Isi apiConfig dari Supabase
+    // Override dengan data dari Supabase (lebih fresh)
     if (data.meta_token) apiConfig.meta = { token: data.meta_token, bizId: data.meta_biz_id || '' };
     if (data.google_token) apiConfig.google = { token: data.google_token, mccId: data.google_mcc_id || '' };
     if (data.tiktok_token) apiConfig.tiktok = { token: data.tiktok_token, advId: data.tiktok_adv_id || '' };
 
-    // Platform dari Supabase — update welcomeSelected langsung
     if (data.platforms?.length) {
       welcomeSelected.clear();
       data.platforms.forEach(p => welcomeSelected.add(p));
@@ -1119,7 +1130,6 @@ async function loadUserConfig() {
 
     localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
   } catch(e) {
-    // Fallback ke localStorage jika Supabase gagal
     console.warn('Supabase load failed, using localStorage cache');
   }
   await loadManualLimits();
@@ -1167,13 +1177,17 @@ function initApp() {
   if (roleEl) roleEl.textContent = currentUser?.user_metadata?.role || 'User';
   if (avatarEl) avatarEl.textContent = name.slice(0,2).toUpperCase();
 
-  // welcomeSelected sudah diisi oleh loadUserConfig dari Supabase
-  // Fallback ke localStorage jika Supabase tidak ada data
+  // Isi welcomeSelected — cek localStorage dulu (lebih cepat), lalu Supabase
   if (welcomeSelected.size === 0) {
     const savedPlatforms = localStorage.getItem('admonitor_platforms');
     if (savedPlatforms) {
-      JSON.parse(savedPlatforms).forEach(p => welcomeSelected.add(p));
+      try { JSON.parse(savedPlatforms).forEach(p => welcomeSelected.add(p)); } catch(e) {}
     }
+  }
+  // Fallback hardcode Meta jika masih kosong tapi ada token
+  if (welcomeSelected.size === 0 && apiConfig.meta?.token) {
+    welcomeSelected.add('meta');
+    localStorage.setItem('admonitor_platforms', JSON.stringify(['meta']));
   }
 
   if (welcomeSelected.size > 0) {
