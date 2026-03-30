@@ -2721,8 +2721,13 @@ function renderKampanyaDummy(adv) {
 }
 
 // ── Date Range ────────────────────────────────────────────────────
-const fmtDate = d => d.toISOString().split('T')[0];
-const today = () => { const d = new Date(); return fmtDate(d); };
+const fmtDate = d => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+};
+const today = () => fmtDate(new Date());
 const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return fmtDate(d); };
 
 let dateRange = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' };
@@ -2871,10 +2876,19 @@ function initDatePicker() {
       if (b.getAttribute('onclick')?.includes("'"+presetMap[dateRange.label]+"'")) b.classList.add('active');
     });
   }
-  // Set max date ke hari ini
+  // Set max date ke hari ini (pakai local date)
   const t = today();
   document.getElementById('date-from').max = t;
   document.getElementById('date-to').max = t;
+  // Update until ke hari ini kalau preset
+  if (dateRange.label === 'Hari Ini') {
+    dateRange.since = t;
+    dateRange.until = t;
+  } else if (dateRange.until < t && !dateRange.label.includes('→') && dateRange.label !== 'Kemarin' && dateRange.label !== 'Bulan Lalu') {
+    dateRange.until = t;
+  }
+  document.getElementById('date-from').value = dateRange.since;
+  document.getElementById('date-to').value = dateRange.until;
 }
 
 // ── Date Picker Akun & Kampanye ───────────────────────────────────
