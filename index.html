@@ -1198,12 +1198,21 @@ async function testConnections() {
     try {
       const allAccounts = await fetchAllMetaAccounts(apiConfig.meta.token);
       if (allAccounts.length) {
+        cachedMetaAccounts = allAccounts;
         results.push(`Meta ✓ (${allAccounts.length} ad account ditemukan)`);
         await fetchAndRenderMeta(allAccounts);
       } else {
-        results.push('Meta ✗ (' + (d.error?.message || 'error') + ')');
+        results.push('Meta ✗ (0 akun — cek permission token)');
       }
-    } catch(e) { results.push('Meta ✗ (network error)'); }
+    } catch(e) {
+      // Token expired atau network error — jangan hapus data yang sudah ada
+      const msg = e.message || 'network error';
+      if (msg.includes('Failed to fetch') || msg.includes('network')) {
+        results.push('Meta ✗ — Token mungkin expired, silakan generate token baru di Graph API Explorer');
+      } else {
+        results.push('Meta ✗ (' + msg + ')');
+      }
+    }
   }
   if (isConnected('google')) results.push('Google → via backend');
   if (isConnected('tiktok')) results.push('TikTok → via backend');
@@ -1216,8 +1225,14 @@ async function fetchAllMetaAccounts(token) {
   let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status,spend_cap,amount_spent,daily_spend_limit,currency&limit=200`;
   while (url) {
     const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
-    if (d.error) break;
+    if (d.error) {
+      const code = d.error.code;
+      if (code === 190) throw new Error('Token expired — generate token baru di Graph API Explorer');
+      if (code === 200 || code === 100) throw new Error('Permission kurang — tambahkan ads_read ke token');
+      throw new Error(d.error.message || 'API error');
+    }
     all = all.concat(d.data || []);
     url = d.paging?.next || null;
   }
