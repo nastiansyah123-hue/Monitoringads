@@ -1,25 +1,18 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "api/*.js", "use": "@vercel/node" }
   ],
   "routes": [
-    {
-      "src": "/",
-      "dest": "/index.html",
-      "headers": {
-        "Content-Type": "text/html; charset=utf-8"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html",
-      "headers": {
-        "Content-Type": "text/html; charset=utf-8"
-      }
-    }
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/", "dest": "/index.html", "headers": { "Content-Type": "text/html; charset=utf-8" } },
+    { "src": "/(.*)", "dest": "/index.html", "headers": { "Content-Type": "text/html; charset=utf-8" } }
+  ],
+  "crons": [
+    { "path": "/api/send-wa", "schedule": "0 2 * * *" },
+    { "path": "/api/send-wa", "schedule": "0 7 * * *" },
+    { "path": "/api/send-wa", "schedule": "0 11 * * *" },
+    { "path": "/api/send-wa", "schedule": "0 14 * * *" }
   ]
 }
