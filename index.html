@@ -1296,7 +1296,7 @@ async function testConnections() {
 
 async function fetchAllMetaAccounts(token) {
   let all = [];
-  let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status,spend_cap,amount_spent,daily_spend_limit,currency&limit=200`;
+  let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status,spend_cap,amount_spent,currency&limit=200`;
   while (url) {
     const r = await fetch(url);
     const d = await r.json();
