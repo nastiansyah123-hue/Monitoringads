@@ -2271,18 +2271,22 @@ async function saveManualLimit(id, currentSpend) {
   // Simpan lokal & render LANGSUNG dulu
   manualLimits[id] = { limit: limitVal, saldoAwal: saldoVal, spendSaatSet: currentSpend };
   localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
-  renderAkun(ALL_DATA); // Render langsung tanpa tunggu Supabase
+  renderAkun(ALL_DATA);
 
-  // Simpan ke Supabase di background (tidak blocking)
+  // Simpan ke Supabase
   if (currentUser) {
-    sb.from('account_limits').upsert({
+    const { error } = await sb.from('account_limits').upsert({
       user_id: currentUser.id,
       account_id: id,
       limit_amount: limitVal,
       saldo_awal: saldoVal,
       spend_saat_set: currentSpend,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,account_id' }).catch(()=>{});
+    }, { onConflict: 'user_id,account_id' });
+    if (error) {
+      console.error('Supabase save error:', error);
+      alert('Gagal simpan ke cloud: ' + error.message + '\n\nData tersimpan lokal saja.');
+    }
   }
 }
 
