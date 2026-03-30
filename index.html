@@ -968,7 +968,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Advertisers -->
-    <div id="view-advertisers" style="display:none;background:var(--surface2)">
+    <div id="view-advertisers" style="display:none;min-height:100vh;width:100%;position:relative;z-index:10;background:var(--bg)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
         <div>
           <h1 style="font-size:17px;font-weight:600">Advertisers</h1>
@@ -1003,7 +1003,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Ad Accounts -->
-    <div id="view-adaccounts" style="display:none;background:var(--surface2)">
+    <div id="view-adaccounts" style="display:none;min-height:100vh;width:100%;position:relative;z-index:10;background:var(--bg)">
       <div class="page-header">
         <div class="page-title"><h1>Ad Accounts</h1><p>Mapping akun iklan ke advertiser</p></div>
         <button class="btn btn-primary btn-sm" onclick="openAccModal()">+ Tambah Ad Account</button>
@@ -1086,7 +1086,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: WA Auto -->
-    <div id="view-wa" style="display:none;background:var(--surface2)">
+    <div id="view-wa" style="display:none;min-height:100vh;width:100%;position:relative;z-index:10;background:var(--bg)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
         <div>
           <h1 style="font-size:17px;font-weight:600">WA Auto</h1>
@@ -1181,6 +1181,20 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 </div>
 
 <script>
+
+// DEBUG: Force show advertisers on load
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    var el = document.getElementById('view-advertisers');
+    if (el) {
+      console.log('view-advertisers found, display:', el.style.display);
+      console.log('view-advertisers innerHTML length:', el.innerHTML.length);
+    } else {
+      console.log('ERROR: view-advertisers NOT FOUND in DOM');
+    }
+  }, 2000);
+});
+
 function setMobileNav(active) {
   ['dashboard','akun','advertisers','config'].forEach(v => {
     const el = document.getElementById('mob-'+v);
