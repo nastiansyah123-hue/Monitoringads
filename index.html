@@ -672,11 +672,11 @@ tr:hover td{background:rgba(255,255,255,0.015);}
                 <tr>
                   <th style="width:35%">Nama Kampanye</th>
                   <th style="width:15%">Spend</th>
-                  <th style="width:10%">CTR</th>
-                  <th style="width:10%">ROAS</th>
+                  <th style="width:10%">Lead</th>
+                  <th style="width:12%">CPR</th>
                   <th style="width:12%">Impresi</th>
                   <th style="width:10%">Status</th>
-                  <th style="width:8%">Klik</th>
+                  <th style="width:6%">Klik</th>
                 </tr>
               </thead>
               <tbody id="kampanye-body"></tbody>
@@ -1003,34 +1003,39 @@ async function fetchAndRenderMeta(adAccounts) {
   const until = dateRange.until;
   const statusMap = { 1:'Aktif', 2:'Paused', 3:'Ended', 7:'Ended' };
 
-  // Tampilkan loading di header
   document.getElementById('last-update').textContent = 'Memuat data Meta (' + adAccounts.length + ' akun)...';
 
-  // Fetch semua akun secara paralel (jauh lebih cepat)
   const metaRows = await Promise.all(adAccounts.map(async acc => {
     try {
-      const r = await fetch(`https://graph.facebook.com/v19.0/${acc.id}/insights?access_token=${token}&fields=spend,clicks,impressions,purchase_roas&time_range={"since":"${since}","until":"${until}"}&level=account`);
+      const r = await fetch(`https://graph.facebook.com/v19.0/${acc.id}/insights?access_token=${token}&fields=spend,clicks,impressions,actions&time_range={"since":"${since}","until":"${until}"}&level=account`);
       const d = await r.json();
       const row = d.data?.[0];
       const spend = parseFloat(row?.spend || 0);
       const imp = parseInt(row?.impressions || 0);
       const clicks = parseInt(row?.clicks || 0);
-      const roas = parseFloat(row?.purchase_roas?.[0]?.value || 0);
+
+      // Ambil jumlah lead dari actions
+      const actions = row?.actions || [];
+      const leadAction = actions.find(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped');
+      const leads = parseInt(leadAction?.value || 0);
+      const cpr = leads > 0 ? Math.round(spend / leads) : 0;
+
       return {
         id: acc.id,
         name: acc.name,
         platform: 'meta',
         status: statusMap[acc.account_status] || 'Aktif',
-        spend, imp, budget: 0,
+        spend, imp, clicks, budget: 0,
         ctr: imp > 0 ? +((clicks/imp)*100).toFixed(2) : 0,
-        roas: +roas.toFixed(2),
+        roas: 0,
+        leads,
+        cpr,
       };
     } catch(e) {
-      return { id:acc.id, name:acc.name, platform:'meta', status: statusMap[acc.account_status]||'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0 };
+      return { id:acc.id, name:acc.name, platform:'meta', status: statusMap[acc.account_status]||'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0, leads:0, cpr:0 };
     }
   }));
 
-  // Clear data Meta lama, masukkan data baru
   const nonMeta = ALL_DATA.filter(a => a.platform !== 'meta');
   ALL_DATA.length = 0;
   nonMeta.forEach(a => ALL_DATA.push(a));
@@ -1350,12 +1355,12 @@ function renderAkun(data) {
               <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtRp(a.spend)}</div>
             </div>
             <div style="background:var(--surface2);border-radius:6px;padding:8px">
-              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">CTR</div>
-              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${a.ctr.toFixed(1)}%</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">CPR</div>
+              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${a.leads>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</div>
             </div>
             <div style="background:var(--surface2);border-radius:6px;padding:8px">
-              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">ROAS</div>
-              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${a.roas.toFixed(1)}x</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:3px">Lead</div>
+              <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0).toLocaleString('id-ID')}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:10px;gap:6px">
@@ -1443,8 +1448,8 @@ function renderKampanye(campaigns, adv) {
   document.getElementById('kampanye-metrics').innerHTML = `
     <div class="mc"><div class="mc-label">Total Kampanye</div><div class="mc-val">${campaigns.length}</div></div>
     <div class="mc"><div class="mc-label">Total Spend</div><div class="mc-val">${fmtRp(totalSpend)}</div></div>
-    <div class="mc"><div class="mc-label">Avg CTR</div><div class="mc-val">${avgCtr.toFixed(1)}%</div></div>
-    <div class="mc"><div class="mc-label">Avg ROAS</div><div class="mc-val">${avgRoas.toFixed(1)}x</div></div>
+    <div class="mc"><div class="mc-label">Total Lead</div><div class="mc-val">${campaigns.reduce((s,c)=>s+(c.leads||0),0).toLocaleString('id-ID')}</div></div>
+    <div class="mc"><div class="mc-label">Avg CPR</div><div class="mc-val">${totalSpend>0&&campaigns.reduce((s,c)=>s+(c.leads||0),0)>0?fmtRp(Math.round(totalSpend/campaigns.reduce((s,c)=>s+(c.leads||0),0))):'–'}</div></div>
   `;
 
   const statusColor = s => s === 'ACTIVE' ? 'badge-active' : s === 'PAUSED' ? 'badge-paused' : 'badge-ended';
@@ -1454,8 +1459,8 @@ function renderKampanye(campaigns, adv) {
     <tr>
       <td><div style="font-size:12px;font-weight:500">${c.name}</div><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${c.objective||''}</div></td>
       <td class="num">${fmtRp(c.spend)}</td>
-      <td class="num">${c.ctr.toFixed(1)}%</td>
-      <td class="num">${c.roas.toFixed(1)}x</td>
+      <td class="num">${(c.leads||0).toLocaleString('id-ID')}</td>
+      <td class="num">${(c.leads||0)>0?fmtRp(Math.round(c.spend/(c.leads||1))):'–'}</td>
       <td class="num">${fmtImp(c.imp)}</td>
       <td><span class="badge ${statusColor(c.status)}">${statusLabel(c.status)}</span></td>
       <td class="num">${fmtImp(c.clicks)}</td>
