@@ -1764,28 +1764,23 @@ function renderTable(data) {
       <td class="num">${(a.leads||0)>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</td>
       <td class="num">${fmtImp(a.imp)}</td>
       <td>
-        ${a.jangkauanSaldo > 0 ? `
-          <div style="display:flex;flex-direction:column;gap:3px;min-width:100px">
-            <div style="display:flex;align-items:center;gap:5px;">
-              <div class="prog" style="flex:1"><div class="prog-fill" style="width:${a.budget}%;background:${budgetColor(a.budget)}"></div></div>
-              <span class="num" style="font-size:10px;color:${budgetColor(a.budget)};width:28px;text-align:right;font-weight:500">${a.budget}%</span>
+        ${(() => {
+          const limit = manualLimits[a.id] || 0;
+          const spent = a.amountSpentRp || a.spend || 0;
+          const sisa = Math.max(0, limit - spent);
+          const pct = limit > 0 ? Math.min(100, Math.round(spent/limit*100)) : 0;
+          const col = pct>=90?'#f75c5c':pct>=70?'#f5a623':'#22d3a0';
+          return limit > 0 ? `
+            <div style="min-width:110px">
+              <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);margin-bottom:3px">
+                <span style="color:var(--text2)">${fmtRp(spent)}</span>
+                <span style="color:${col};font-weight:500">${pct}%</span>
+              </div>
+              <div class="prog"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">Sisa: <span style="color:${col}">${fmtRp(sisa)}</span> / ${fmtRp(limit)}</div>
             </div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">
-              Sisa: <span style="color:${budgetColor(a.budget)};font-weight:500">${fmtRp(a.sisaBudget)}</span>
-            </div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">
-              Limit: ${fmtRp(a.jangkauanSaldo)}
-            </div>
-          </div>
-        ` : a.spendCap > 0 ? `
-          <div style="display:flex;flex-direction:column;gap:3px;min-width:100px">
-            <div style="display:flex;align-items:center;gap:5px;">
-              <div class="prog" style="flex:1"><div class="prog-fill" style="width:${a.budget}%;background:${budgetColor(a.budget)}"></div></div>
-              <span class="num" style="font-size:10px;color:${budgetColor(a.budget)};width:28px;text-align:right">${a.budget}%</span>
-            </div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">Sisa: ${fmtRp(a.sisaBudget)}</div>
-          </div>
-        ` : `<span style="font-size:11px;color:var(--text3)">Tidak ada limit</span>`}
+          ` : `<span style="font-size:11px;color:var(--text3)">Belum diset</span>`;
+        })()}
       </td>
       <td><button class="action-btn" onclick="openKampanye('${a.id}')">Detail</button></td>
     </tr>
@@ -2015,29 +2010,45 @@ function renderAkun(data) {
           </div>
           <!-- Budget Manual -->
           <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;" onclick="event.stopPropagation()">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span style="font-size:10px;font-weight:500;color:var(--text2)">Jangkauan Saldo</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:10px;font-weight:500;color:var(--text2)">Limit Akun</span>
               <button onclick="toggleEditLimit('${a.id}')" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans)">Edit</button>
             </div>
             <div id="limit-display-${a.id}">
-              ${manualLimits[a.id] > 0 ? `
-                <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">
-                  <div style="height:100%;width:${Math.min(100,Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100))}%;border-radius:3px;background:${Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=90?'#f75c5c':Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=70?'#f5a623':'#22d3a0'}"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
-                  <span style="color:var(--text2)">Sisa: <span style="color:${Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=90?'#f75c5c':Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100)>=70?'#f5a623':'#22d3a0'};font-weight:500">${fmtRp(Math.max(0,manualLimits[a.id]-(a.amountSpentRp||a.spend)))}</span></span>
-                  <span style="color:var(--text3)">Limit: ${fmtRp(manualLimits[a.id])}</span>
-                </div>
-                <div style="font-size:10px;color:var(--text3);margin-top:3px">${Math.min(100,Math.round((a.amountSpentRp||a.spend)/manualLimits[a.id]*100))}% terpakai · Saldo: ${fmtRp(a.amountSpentRp||a.spend)}</div>
-              ` : `<div style="font-size:11px;color:var(--text3)">Belum diset — klik Edit untuk input jangkauan saldo</div>`}
+              ${(() => {
+                const limit = manualLimits[a.id] || 0;
+                const spent = a.amountSpentRp || a.spend || 0;
+                const sisa = Math.max(0, limit - spent);
+                const pct = limit > 0 ? Math.min(100, Math.round(spent/limit*100)) : 0;
+                const col = pct>=90?'#f75c5c':pct>=70?'#f5a623':'#22d3a0';
+                return limit > 0 ? `
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+                    <div>
+                      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Limit</div>
+                      <div style="font-size:13px;font-weight:500;font-family:var(--mono);color:var(--text)">${fmtRp(limit)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Sudah Spend</div>
+                      <div style="font-size:13px;font-weight:500;font-family:var(--mono);color:${col}">${fmtRp(spent)}</div>
+                    </div>
+                  </div>
+                  <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:5px">
+                    <div style="height:100%;width:${pct}%;border-radius:3px;background:${col};transition:width .3s"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
+                    <span style="color:var(--text2)">Sisa: <span style="color:${col};font-weight:500">${fmtRp(sisa)}</span></span>
+                    <span style="color:var(--text3)">${pct}% terpakai</span>
+                  </div>
+                ` : `<div style="font-size:11px;color:var(--text3)">Belum diset — klik Edit</div>`;
+              })()}
             </div>
             <div id="limit-edit-${a.id}" style="display:none;margin-top:6px">
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="limit-input-${a.id}" placeholder="Contoh: 772664" value="${manualLimits[a.id]||''}"
-                  style="font-family:var(--mono);font-size:11px;padding:5px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--text);flex:1;min-width:0">
-                <button onclick="saveManualLimit('${a.id}')" style="font-size:11px;padding:5px 12px;border-radius:6px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);flex-shrink:0">Simpan</button>
+                  style="font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--text);flex:1;min-width:0">
+                <button onclick="saveManualLimit('${a.id}')" style="font-size:11px;padding:6px 12px;border-radius:6px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);flex-shrink:0">Simpan</button>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:4px">Input dalam Rupiah penuh. Contoh: 772664 = Rp772.664</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:4px">Input dalam Rupiah. Contoh: 772664 = Rp772.664</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:10px;gap:6px">
