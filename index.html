@@ -7,6 +7,46 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
+/* Welcome Screen */
+.welcome-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;}
+.welcome-screen.hidden{display:none;}
+.welcome-box{width:100%;max-width:560px;}
+.welcome-logo{display:flex;align-items:center;gap:12px;margin-bottom:40px;}
+.welcome-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.welcome-logo-icon svg{width:22px;height:22px;fill:white;}
+.welcome-logo-name{font-size:18px;font-weight:600;letter-spacing:-0.02em;}
+.welcome-logo-name span{color:#4f8ef7;}
+.welcome-title{font-size:26px;font-weight:600;letter-spacing:-0.03em;margin-bottom:8px;line-height:1.3;}
+.welcome-sub{font-size:14px;color:var(--text2);margin-bottom:36px;line-height:1.6;}
+.platform-cards-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px;}
+.wp-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.wp-card:hover{transform:translateY(-2px);}
+.wp-card.wp-meta:hover{border-color:rgba(24,119,242,0.4);background:rgba(24,119,242,0.06);}
+.wp-card.wp-google:hover{border-color:rgba(234,67,53,0.4);background:rgba(234,67,53,0.06);}
+.wp-card.wp-tiktok:hover{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.04);}
+.wp-card.wp-selected{transform:translateY(-2px);}
+.wp-card.wp-selected.wp-meta{border-color:rgba(24,119,242,0.5);background:rgba(24,119,242,0.1);}
+.wp-card.wp-selected.wp-google{border-color:rgba(234,67,53,0.5);background:rgba(234,67,53,0.1);}
+.wp-card.wp-selected.wp-tiktok{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.06);}
+.wp-check{position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);background:transparent;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.wp-card.wp-selected .wp-check{background:#4f8ef7;border-color:#4f8ef7;}
+.wp-check svg{width:10px;height:10px;fill:white;opacity:0;transition:opacity .15s;}
+.wp-card.wp-selected .wp-check svg{opacity:1;}
+.wp-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.wp-name{font-size:14px;font-weight:600;margin-bottom:4px;}
+.wp-desc{font-size:11px;color:var(--text2);line-height:1.5;}
+.wp-conn{font-size:10px;margin-top:8px;padding:2px 8px;border-radius:100px;display:inline-block;font-family:var(--mono);}
+.wp-conn.yes{background:var(--green-bg);color:var(--green-text);}
+.wp-conn.no{background:rgba(120,120,140,0.1);color:var(--text2);}
+.welcome-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.welcome-hint{font-size:12px;color:var(--text3);}
+.btn-start{font-family:var(--sans);font-size:14px;font-weight:500;padding:11px 28px;border-radius:10px;background:#4f8ef7;border:none;color:white;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px;}
+.btn-start:hover{background:#3d7ef0;}
+.btn-start:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-start svg{width:14px;height:14px;fill:white;}
+.select-all-btn{font-family:var(--sans);font-size:12px;padding:8px 16px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;}
+.select-all-btn:hover{background:var(--surface2);color:var(--text);}
+</style>
 :root {
   --bg:#0d0f12; --surface:#161920; --surface2:#1e2330; --surface3:#252c3a;
   --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
@@ -175,12 +215,80 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 .modal-hint{font-size:11px;color:var(--text3);margin-top:4px;}
 .platform-logo{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;}
 
+/* Date Picker */
+.date-picker-wrap{position:relative;}
+.date-trigger{display:flex;align-items:center;white-space:nowrap;min-width:180px;}
+.date-dropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;width:300px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:8px;z-index:50;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+.date-dropdown.open{display:block;}
+.date-presets{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;}
+.date-preset{font-family:var(--sans);font-size:12px;padding:7px 10px;border-radius:7px;border:none;background:transparent;color:var(--text2);cursor:pointer;text-align:left;transition:all .12s;}
+.date-preset:hover{background:var(--surface2);color:var(--text);}
+.date-preset.active{background:rgba(79,142,247,0.15);color:#4f8ef7;font-weight:500;}
+.date-divider{height:1px;background:var(--border);margin:6px 0;}
+.date-custom-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.date-range-inputs{display:flex;align-items:center;gap:8px;}
+.date-field{display:flex;flex-direction:column;gap:3px;flex:1;}
+.date-field label{font-size:10px;color:var(--text2);}
+.date-input{font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);width:100%;cursor:pointer;}
+.date-input:focus{outline:none;border-color:rgba(79,142,247,0.5);}
+.date-sep{font-size:12px;color:var(--text3);flex-shrink:0;margin-top:14px;}
 @media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr);}.platform-breakdown{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.api-panel-inner{grid-template-columns:1fr;}}
 @media(max-width:700px){.sidebar{display:none;}}
 </style>
 </head>
 <body>
-<div class="layout">
+<!-- Welcome / Platform Picker Screen -->
+<div class="welcome-screen" id="welcome-screen">
+  <div class="welcome-box">
+    <div class="welcome-logo">
+      <div class="welcome-logo-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg></div>
+      <div class="welcome-logo-name">Ad<span>Monitor</span></div>
+    </div>
+    <div class="welcome-title">Pilih platform yang<br>ingin kamu monitoring</div>
+    <div class="welcome-sub">Pilih satu atau lebih platform. Kamu bisa mengubahnya kapan saja dari dashboard.</div>
+    <div class="platform-cards-grid">
+      <div class="wp-card wp-meta" id="wp-meta" onclick="toggleWelcomePlatform('meta')">
+        <div class="wp-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <div class="wp-icon" style="background:#1877F2">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        </div>
+        <div class="wp-name">Meta Ads</div>
+        <div class="wp-desc">Facebook & Instagram Ads — monitoring spend, CTR, ROAS per ad account</div>
+        <span class="wp-conn" id="wp-meta-conn">Belum terhubung</span>
+      </div>
+      <div class="wp-card wp-google" id="wp-google" onclick="toggleWelcomePlatform('google')">
+        <div class="wp-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <div class="wp-icon" style="background:white;border:1px solid #eee">
+          <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.8V14h3.75c-.15 1.02-.95 2.99-3.75 2.99-2.26 0-4.1-1.87-4.1-4.17s1.84-4.17 4.1-4.17c1.28 0 2.15.55 2.64 1.02L17 7.37A6.75 6.75 0 0 0 12 5.17C8.13 5.17 5 8.3 5 12.17s3.13 7 7 7c4.04 0 6.72-2.84 6.72-6.84 0-.46-.05-.81-.11-1.16H12z"/></svg>
+        </div>
+        <div class="wp-name">Google Ads</div>
+        <div class="wp-desc">Search, Display & YouTube Ads — monitoring kampanye lintas MCC</div>
+        <span class="wp-conn" id="wp-google-conn">Belum terhubung</span>
+      </div>
+      <div class="wp-card wp-tiktok" id="wp-tiktok" onclick="toggleWelcomePlatform('tiktok')">
+        <div class="wp-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <div class="wp-icon" style="background:#010101;border:1px solid #333">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.85a8.17 8.17 0 0 0 4.78 1.52V6.91a4.85 4.85 0 0 1-1.01-.22z"/></svg>
+        </div>
+        <div class="wp-name">TikTok Ads</div>
+        <div class="wp-desc">TikTok for Business — monitoring performa iklan video & campaign</div>
+        <span class="wp-conn" id="wp-tiktok-conn">Belum terhubung</span>
+      </div>
+    </div>
+    <div class="welcome-footer">
+      <div>
+        <button class="select-all-btn" onclick="selectAllPlatforms()">Pilih semua</button>
+        <div class="welcome-hint" style="margin-top:8px" id="welcome-selected-hint">Belum ada platform dipilih</div>
+      </div>
+      <button class="btn-start" id="btn-start" onclick="startDashboard()" disabled>
+        Mulai Monitoring
+        <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="layout" id="app-layout" style="display:none">
 
   <!-- Sidebar -->
   <aside class="sidebar">
@@ -219,6 +327,10 @@ tr:hover td{background:rgba(255,255,255,0.015);}
         <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--text2)"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.85a8.17 8.17 0 0 0 4.78 1.52V6.91a4.85 4.85 0 0 1-1.01-.22z"/></svg>
         TikTok Ads
         <span style="margin-left:auto;font-size:10px;padding:1px 6px;border-radius:100px;" id="tiktok-sidebar-badge" class="badge-active badge">OFF</span>
+      </button>
+      <button class="nav-item" onclick="backToWelcome()" style="margin-top:4px;border-top:1px solid var(--border);border-radius:0;padding-top:12px;">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+        Ganti Platform
       </button>
     </div>
     <div class="sidebar-footer">
@@ -329,12 +441,42 @@ tr:hover td{background:rgba(255,255,255,0.015);}
           <p id="last-update">Data dummy — hubungkan API untuk data real</p>
         </div>
         <div class="header-actions">
-          <select class="btn" id="period-sel" onchange="renderAll()">
-            <option value="7">7 Hari</option>
-            <option value="30" selected>30 Hari</option>
-            <option value="90">90 Hari</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="renderAll()">
+          <div class="date-picker-wrap" id="date-picker-wrap">
+            <button class="btn date-trigger" id="date-trigger" onclick="toggleDatePicker()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:5px;vertical-align:-1px;opacity:.6"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+              <span id="date-label">30 Hari Terakhir</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="margin-left:4px;opacity:.5"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+            <div class="date-dropdown" id="date-dropdown">
+              <div class="date-presets">
+                <button class="date-preset" onclick="setPreset('today')">Hari ini</button>
+                <button class="date-preset" onclick="setPreset('yesterday')">Kemarin</button>
+                <button class="date-preset" onclick="setPreset('7')">7 Hari terakhir</button>
+                <button class="date-preset active" onclick="setPreset('30')">30 Hari terakhir</button>
+                <button class="date-preset" onclick="setPreset('90')">90 Hari terakhir</button>
+                <button class="date-preset" onclick="setPreset('this_month')">Bulan ini</button>
+                <button class="date-preset" onclick="setPreset('last_month')">Bulan lalu</button>
+                <button class="date-preset" onclick="setPreset('max')">Maksimal (1 tahun)</button>
+              </div>
+              <div class="date-divider"></div>
+              <div class="date-custom">
+                <div class="date-custom-label">Pilih tanggal</div>
+                <div class="date-range-inputs">
+                  <div class="date-field">
+                    <label>Dari</label>
+                    <input type="date" id="date-from" class="date-input" onchange="setCustomDate()">
+                  </div>
+                  <div class="date-sep">→</div>
+                  <div class="date-field">
+                    <label>Sampai</label>
+                    <input type="date" id="date-to" class="date-input" onchange="setCustomDate()">
+                  </div>
+                </div>
+                <div id="date-range-info" style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="applyDateAndRefresh()">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;vertical-align:-1px"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             Refresh
           </button>
@@ -426,7 +568,7 @@ tr:hover td{background:rgba(255,255,255,0.015);}
     </div>
 
   </div>
-</div>
+</div><!-- /app-layout -->
 
 <!-- Setup Modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
@@ -452,6 +594,21 @@ const PLATFORMS = {
   google: { label:'Google Ads', color:'#EA4335', textColor:'#f87171', bg:'rgba(234,67,53,0.12)' },
   tiktok: { label:'TikTok Ads', color:'#010101', textColor:'#e2e8f0', bg:'rgba(255,255,255,0.08)' },
 };
+
+const DUMMY_DATA = [
+  { id:'ADV-001', name:'Tokopedia', platform:'google', status:'Aktif', spend:820000000, ctr:4.2, roas:5.1, imp:2400000, budget:90 },
+  { id:'ADV-002', name:'Shopee ID', platform:'meta', status:'Aktif', spend:650000000, ctr:3.8, roas:4.7, imp:1980000, budget:75 },
+  { id:'ADV-003', name:'Gojek', platform:'tiktok', status:'Aktif', spend:540000000, ctr:4.0, roas:4.3, imp:1650000, budget:60 },
+  { id:'ADV-004', name:'BCA Digital', platform:'meta', status:'Aktif', spend:430000000, ctr:2.9, roas:3.8, imp:1200000, budget:55 },
+  { id:'ADV-005', name:'Grab ID', platform:'google', status:'Paused', spend:310000000, ctr:3.1, roas:3.5, imp:980000, budget:40 },
+  { id:'ADV-006', name:'Traveloka', platform:'tiktok', status:'Aktif', spend:280000000, ctr:3.6, roas:4.0, imp:870000, budget:38 },
+  { id:'ADV-007', name:'OVO Finance', platform:'google', status:'Aktif', spend:245000000, ctr:2.7, roas:3.2, imp:740000, budget:85 },
+  { id:'ADV-008', name:'Bukalapak', platform:'meta', status:'Paused', spend:198000000, ctr:2.4, roas:2.9, imp:620000, budget:30 },
+  { id:'ADV-009', name:'Blibli', platform:'tiktok', status:'Aktif', spend:175000000, ctr:3.3, roas:3.9, imp:550000, budget:35 },
+  { id:'ADV-010', name:'Lazada ID', platform:'meta', status:'Ended', spend:120000000, ctr:1.9, roas:2.1, imp:390000, budget:100 },
+  { id:'ADV-011', name:'Dana Dompet', platform:'google', status:'Aktif', spend:95000000, ctr:2.1, roas:2.8, imp:310000, budget:28 },
+  { id:'ADV-012', name:'Tiket.com', platform:'tiktok', status:'Ended', spend:78000000, ctr:1.7, roas:1.9, imp:240000, budget:100 },
+];
 
 const ALL_DATA = [
   { id:'ADV-001', name:'Tokopedia', platform:'google', status:'Aktif', spend:820000000, ctr:4.2, roas:5.1, imp:2400000, budget:90 },
@@ -597,8 +754,8 @@ async function fetchAllMetaAccounts(token) {
 
 async function fetchAndRenderMeta(adAccounts) {
   const token = apiConfig.meta.token;
-  const since = (() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0]; })();
-  const until = new Date().toISOString().split('T')[0];
+  const since = dateRange.since;
+  const until = dateRange.until;
   const statusMap = { 1:'Aktif', 2:'Paused', 3:'Ended', 7:'Ended' };
 
   const metaRows = [];
@@ -864,17 +1021,234 @@ function renderAll() {
   document.getElementById('last-update').textContent = 'Update: '+new Date().toLocaleString('id-ID',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})+(isConnected('meta')?' · Meta: real data':'  · Data dummy');
 }
 
-loadConfigToInputs();
-updateConnectionStatus();
-updateCounts();
-renderAll();
-
-// Auto fetch Meta jika token sudah tersimpan
-if (isConnected('meta')) {
-  fetchAllMetaAccounts(apiConfig.meta.token)
-    .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
-    .catch(()=>{});
+function backToWelcome() {
+  localStorage.removeItem('admonitor_platforms');
+  // Reset ALL_DATA ke semua dummy
+  ALL_DATA.length = 0;
+  DUMMY_DATA.forEach(a => ALL_DATA.push({...a}));
+  welcomeSelected.clear();
+  ['meta','google','tiktok'].forEach(p => {
+    document.getElementById('wp-'+p).classList.remove('wp-selected');
+    const el = document.getElementById('wp-'+p+'-conn');
+    if (el) {
+      const conn = isConnected(p);
+      el.textContent = conn ? 'Token tersimpan' : 'Belum terhubung';
+      el.className = 'wp-conn ' + (conn ? 'yes' : 'no');
+    }
+  });
+  updateWelcomeHint();
+  document.getElementById('app-layout').style.display = 'none';
+  document.getElementById('welcome-screen').classList.remove('hidden');
 }
+
+// ── Date Range ────────────────────────────────────────────────────
+const fmtDate = d => d.toISOString().split('T')[0];
+const today = () => { const d = new Date(); return fmtDate(d); };
+const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return fmtDate(d); };
+
+let dateRange = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' };
+
+// Restore date range dari localStorage
+const savedDate = localStorage.getItem('admonitor_date');
+if (savedDate) { try { dateRange = JSON.parse(savedDate); } catch(e){} }
+
+function saveDateRange() { localStorage.setItem('admonitor_date', JSON.stringify(dateRange)); }
+
+function toggleDatePicker() {
+  document.getElementById('date-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('date-picker-wrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('date-dropdown').classList.remove('open');
+});
+
+function setPreset(preset) {
+  const d = new Date();
+  document.querySelectorAll('.date-preset').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  switch(preset) {
+    case 'today':
+      dateRange = { since: today(), until: today(), label: 'Hari Ini' }; break;
+    case 'yesterday':
+      dateRange = { since: daysAgo(1), until: daysAgo(1), label: 'Kemarin' }; break;
+    case '7':
+      dateRange = { since: daysAgo(7), until: today(), label: '7 Hari Terakhir' }; break;
+    case '30':
+      dateRange = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' }; break;
+    case '90':
+      dateRange = { since: daysAgo(90), until: today(), label: '90 Hari Terakhir' }; break;
+    case 'this_month': {
+      const s = new Date(d.getFullYear(), d.getMonth(), 1);
+      dateRange = { since: fmtDate(s), until: today(), label: 'Bulan Ini' }; break;
+    }
+    case 'last_month': {
+      const s = new Date(d.getFullYear(), d.getMonth()-1, 1);
+      const e2 = new Date(d.getFullYear(), d.getMonth(), 0);
+      dateRange = { since: fmtDate(s), until: fmtDate(e2), label: 'Bulan Lalu' }; break;
+    }
+    case 'max':
+      dateRange = { since: daysAgo(365), until: today(), label: 'Maksimal (1 Tahun)' }; break;
+  }
+  // Sync ke input
+  document.getElementById('date-from').value = dateRange.since;
+  document.getElementById('date-to').value = dateRange.until;
+  updateDateInfo();
+  document.getElementById('date-label').textContent = dateRange.label;
+  saveDateRange();
+}
+
+function setCustomDate() {
+  const from = document.getElementById('date-from').value;
+  const to = document.getElementById('date-to').value;
+  if (!from || !to) return;
+  // Maksimal 1 tahun
+  const diff = (new Date(to) - new Date(from)) / (1000*60*60*24);
+  if (diff < 0) { document.getElementById('date-range-info').textContent = 'Tanggal akhir harus setelah tanggal awal'; return; }
+  if (diff > 365) { document.getElementById('date-range-info').textContent = 'Maksimal rentang 365 hari'; document.getElementById('date-to').value = fmtDate(new Date(new Date(from).getTime() + 365*24*60*60*1000)); return; }
+  document.querySelectorAll('.date-preset').forEach(b=>b.classList.remove('active'));
+  const label = from === to ? from : from + ' → ' + to;
+  dateRange = { since: from, until: to, label };
+  document.getElementById('date-label').textContent = label;
+  updateDateInfo();
+  saveDateRange();
+}
+
+function updateDateInfo() {
+  const from = document.getElementById('date-from').value;
+  const to = document.getElementById('date-to').value;
+  if (!from || !to) return;
+  const diff = Math.round((new Date(to) - new Date(from)) / (1000*60*60*24)) + 1;
+  document.getElementById('date-range-info').textContent = diff + ' hari dipilih · ' + from + ' s/d ' + to;
+}
+
+function applyDateAndRefresh() {
+  document.getElementById('date-dropdown').classList.remove('open');
+  saveDateRange();
+  if (isConnected('meta') && welcomeSelected.has('meta')) {
+    fetchAllMetaAccounts(apiConfig.meta.token)
+      .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
+      .catch(()=>{});
+  } else {
+    renderAll();
+  }
+}
+
+function initDatePicker() {
+  document.getElementById('date-from').value = dateRange.since;
+  document.getElementById('date-to').value = dateRange.until;
+  document.getElementById('date-label').textContent = dateRange.label;
+  updateDateInfo();
+  // Highlight preset aktif
+  const presetMap = { 'Hari Ini':'today','Kemarin':'yesterday','7 Hari Terakhir':'7','30 Hari Terakhir':'30','90 Hari Terakhir':'90','Bulan Ini':'this_month','Bulan Lalu':'last_month','Maksimal (1 Tahun)':'max' };
+  if (presetMap[dateRange.label]) {
+    document.querySelectorAll('.date-preset').forEach(b => {
+      if (b.getAttribute('onclick')?.includes("'"+presetMap[dateRange.label]+"'")) b.classList.add('active');
+    });
+  }
+  // Set max date ke hari ini
+  const t = today();
+  document.getElementById('date-from').max = t;
+  document.getElementById('date-to').max = t;
+}
+
+// ── Perbaikan: token tersimpan permanen di localStorage ──────────
+let welcomeSelected = new Set();
+
+function toggleWelcomePlatform(p) {
+  const card = document.getElementById('wp-'+p);
+  if (welcomeSelected.has(p)) {
+    welcomeSelected.delete(p);
+    card.classList.remove('wp-selected');
+  } else {
+    welcomeSelected.add(p);
+    card.classList.add('wp-selected');
+  }
+  updateWelcomeHint();
+}
+
+function selectAllPlatforms() {
+  ['meta','google','tiktok'].forEach(p => {
+    welcomeSelected.add(p);
+    document.getElementById('wp-'+p).classList.add('wp-selected');
+  });
+  updateWelcomeHint();
+}
+
+function updateWelcomeHint() {
+  const btn = document.getElementById('btn-start');
+  const hint = document.getElementById('welcome-selected-hint');
+  const labels = { meta:'Meta Ads', google:'Google Ads', tiktok:'TikTok Ads' };
+  if (welcomeSelected.size === 0) {
+    hint.textContent = 'Belum ada platform dipilih';
+    btn.disabled = true;
+  } else {
+    const names = [...welcomeSelected].map(p => labels[p]).join(', ');
+    hint.textContent = 'Dipilih: ' + names;
+    btn.disabled = false;
+  }
+}
+
+function startDashboard() {
+  localStorage.setItem('admonitor_platforms', JSON.stringify([...welcomeSelected]));
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('app-layout').style.display = 'flex';
+  applyPlatformSelection();
+  loadConfigToInputs();
+  updateConnectionStatus();
+  updateCounts();
+  initDatePicker();
+  renderAll();
+  if (isConnected('meta') && welcomeSelected.has('meta')) {
+    fetchAllMetaAccounts(apiConfig.meta.token)
+      .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
+      .catch(()=>{});
+  }
+}
+
+function applyPlatformSelection() {
+  // Sembunyikan tombol platform yang tidak dipilih
+  const allBtns = { meta: document.getElementById('btn-meta'), google: document.getElementById('btn-google'), tiktok: document.getElementById('btn-tiktok') };
+  ['meta','google','tiktok'].forEach(p => {
+    if (allBtns[p]) allBtns[p].style.display = welcomeSelected.has(p) ? '' : 'none';
+  });
+  // Filter ALL_DATA hanya tampilkan platform yang dipilih
+  for (let i = ALL_DATA.length - 1; i >= 0; i--) {
+    if (!welcomeSelected.has(ALL_DATA[i].platform)) ALL_DATA.splice(i, 1);
+  }
+}
+
+// Cek apakah sudah pernah pilih platform sebelumnya
+const savedPlatforms = localStorage.getItem('admonitor_platforms');
+if (savedPlatforms) {
+  const parsed = JSON.parse(savedPlatforms);
+  parsed.forEach(p => welcomeSelected.add(p));
+  // Langsung masuk dashboard
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('app-layout').style.display = 'flex';
+  applyPlatformSelection();
+  loadConfigToInputs();
+  updateConnectionStatus();
+  updateCounts();
+  initDatePicker();
+  renderAll();
+  if (isConnected('meta') && welcomeSelected.has('meta')) {
+    fetchAllMetaAccounts(apiConfig.meta.token)
+      .then(accounts => { if(accounts.length) fetchAndRenderMeta(accounts); })
+      .catch(()=>{});
+  }
+} else {
+  // Update status koneksi di welcome screen
+  ['meta','google','tiktok'].forEach(p => {
+    const el = document.getElementById('wp-'+p+'-conn');
+    if (el) {
+      const conn = isConnected(p);
+      el.textContent = conn ? 'Token tersimpan ✓' : 'Belum terhubung';
+      el.className = 'wp-conn ' + (conn ? 'yes' : 'no');
+    }
+  });
+}
+
+// ── Init (hanya jalan jika tidak ada savedPlatforms — sudah di atas) ──
 </script>
 </body>
 </html>
