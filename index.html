@@ -939,25 +939,33 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 
     <!-- View: Advertisers -->
     <div id="view-advertisers" style="display:none">
-      <div class="page-header">
-        <div class="page-title"><h1>Advertisers</h1><p>Kelola data advertiser</p></div>
-        <button class="btn btn-primary btn-sm" onclick="openAdvModal()">+ Tambah Advertiser</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div>
+          <h1 style="font-size:17px;font-weight:600">Advertisers</h1>
+          <p style="font-size:11px;color:var(--text2);margin-top:2px">Kelola data advertiser dan akun iklan</p>
+        </div>
+        <button onclick="openAdvModal()" style="padding:7px 16px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)">+ Tambah Advertiser</button>
       </div>
-      <div class="content">
-        <div class="table-card">
-          <div class="card-head">
-            <div class="card-title">Daftar Advertiser</div>
-            <input type="text" id="search-adv" placeholder="Cari..." class="search" style="width:180px" oninput="filterAdv()">
+      <div style="padding:22px 28px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:600">Daftar Advertiser</div>
+            <input type="text" id="search-adv" placeholder="Cari..." oninput="filterAdv()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;width:180px;font-family:var(--sans)">
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr>
-                <th>Nama Advertiser</th>
-                <th>PIC</th>
-                <th>No. WA / Phone</th>
-                <th>Aksi</th>
-              </tr></thead>
-              <tbody id="adv-tbody"><tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Memuat...</td></tr></tbody>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:var(--surface2)">
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Nama</th>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">PIC</th>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Phone / WA</th>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Akun Iklan</th>
+                  <th style="padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="adv-tbody">
+                <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text2)">Memuat...</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -993,19 +1001,25 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 
     <!-- Modal Advertiser -->
     <div id="adv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border-radius:12px;padding:24px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+      <div style="background:var(--surface);border-radius:12px;padding:24px;width:100%;max-width:500px;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">
         <div style="font-size:15px;font-weight:600;margin-bottom:18px" id="adv-modal-title">Tambah Advertiser</div>
         <div style="margin-bottom:12px">
           <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Nama Advertiser *</label>
-          <input id="adv-f-name" type="text" placeholder="PT Herbal Jaya / Alfan" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          <input id="adv-f-name" type="text" placeholder="Contoh: Alfan" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
         </div>
         <div style="margin-bottom:12px">
           <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Nama PIC</label>
           <input id="adv-f-pic" type="text" placeholder="Nama penanggung jawab" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
         </div>
-        <div style="margin-bottom:18px">
+        <div style="margin-bottom:12px">
           <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">No. WA / Phone</label>
           <input id="adv-f-phone" type="text" placeholder="628123456789" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">Akun Iklan <span style="color:var(--text3)">(pilih lebih dari satu)</span></label>
+          <div id="adv-f-accounts" style="max-height:180px;overflow-y:auto;border:1px solid var(--border2);border-radius:8px;padding:6px;background:var(--surface2);display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:12px;color:var(--text3);padding:6px">Memuat akun...</div>
+          </div>
         </div>
         <div id="adv-modal-err" style="font-size:12px;color:#f75c5c;margin-bottom:10px"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -2216,6 +2230,18 @@ function openAdvModal(data) {
   document.getElementById('adv-f-pic').value = data?.pic_name || '';
   document.getElementById('adv-f-phone').value = data?.pic_phone || '';
   document.getElementById('adv-modal-err').textContent = '';
+  // Isi checkbox akun
+  const savedAccounts = JSON.parse(data?.accounts || '[]');
+  const wrap = document.getElementById('adv-f-accounts');
+  if (ALL_DATA.length) {
+    wrap.innerHTML = ALL_DATA.map(a => `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;background:var(--surface);border:1px solid var(--border)">
+        <input type="checkbox" value="${a.id}" data-name="${a.name}" style="accent-color:#4f8ef7;width:14px;height:14px;flex-shrink:0" ${savedAccounts.includes(a.id)?'checked':''}>
+        <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name}</span>
+      </label>`).join('');
+  } else {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px">Belum ada akun Meta terhubung</div>';
+  }
   document.getElementById('adv-modal').style.display = 'flex';
 }
 function closeAdvModal() { document.getElementById('adv-modal').style.display = 'none'; }
@@ -2227,8 +2253,9 @@ async function saveAdv() {
   const errEl = document.getElementById('adv-modal-err');
   const btn = document.getElementById('adv-modal-btn');
   if (!name) { errEl.textContent = 'Nama wajib diisi'; return; }
+  const accounts = [...document.querySelectorAll('#adv-f-accounts input:checked')].map(c => c.value);
   btn.disabled = true; btn.textContent = 'Menyimpan...';
-  const row = { user_id: currentUser?.id, name, pic_name, pic_phone };
+  const row = { user_id: currentUser?.id, name, pic_name, pic_phone, accounts: JSON.stringify(accounts) };
   const { error } = advEditId
     ? await sb.from('advertisers').update(row).eq('id', advEditId)
     : await sb.from('advertisers').insert(row);
@@ -2241,22 +2268,39 @@ async function saveAdv() {
 async function loadAdvList() {
   const tbody = document.getElementById('adv-tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text2)">Memuat...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2)">Memuat...</td></tr>';
   const { data, error } = await sb.from('advertisers').select('*').eq('user_id', currentUser?.id).order('name');
-  if (error) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:#f75c5c">${error.message}</td></tr>`; return; }
-  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Belum ada advertiser. Klik "+ Tambah Advertiser"</td></tr>'; return; }
-  tbody.innerHTML = data.map(d => `
-    <tr>
-      <td><div style="font-weight:500">${d.name}</div></td>
-      <td>${d.pic_name || '-'}</td>
-      <td style="font-family:var(--mono)">${d.pic_phone || '-'}</td>
-      <td>
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:#f75c5c">Error: ${error.message}</td></tr>`;
+    return;
+  }
+  if (!data?.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text2)">Belum ada data. Klik "+ Tambah Advertiser"</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(d => {
+    const accounts = JSON.parse(d.accounts || '[]');
+    const accNames = ALL_DATA.filter(a => accounts.includes(a.id)).map(a =>
+      `<span style="font-size:10px;padding:2px 8px;border-radius:100px;background:var(--meta-bg);color:var(--meta-text);white-space:nowrap">${a.name}</span>`
+    ).join('');
+    const safeD = encodeURIComponent(JSON.stringify(d));
+    return `<tr>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:500">${d.name}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text2)">${d.pic_name||'-'}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px">
+        ${d.pic_phone ? `<a href="https://wa.me/${d.pic_phone.replace(/\D/g,'')}" target="_blank" style="color:#22d3a0;text-decoration:none">${d.pic_phone}</a>` : '-'}
+      </td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${accNames || '<span style="color:var(--text3);font-size:12px">-</span>'}</div>
+      </td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
         <div style="display:flex;gap:6px">
-          <button onclick="openAdvModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" class="action-btn">Edit</button>
+          <button onclick="openAdvModal(JSON.parse(decodeURIComponent('${safeD}')))" class="action-btn">Edit</button>
           <button onclick="deleteAdv('${d.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer;font-family:var(--sans)">Hapus</button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function deleteAdv(id) {
