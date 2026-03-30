@@ -595,13 +595,13 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
             <div class="mc-bar"><div class="mc-bar-fill" id="m-spend-b" style="background:#22d3a0"></div></div>
           </div>
           <div class="mc">
-            <div class="mc-label">Rata-rata CTR</div>
+            <div class="mc-label">Total Hasil</div>
             <div class="mc-val" id="m-ctr">-</div>
             <div class="mc-delta" id="m-ctr-d"></div>
             <div class="mc-bar"><div class="mc-bar-fill" id="m-ctr-b" style="background:#f5a623"></div></div>
           </div>
           <div class="mc">
-            <div class="mc-label">Avg. ROAS</div>
+            <div class="mc-label">Avg. CPR</div>
             <div class="mc-val" id="m-roas">-</div>
             <div class="mc-delta up" id="m-roas-d"></div>
             <div class="mc-bar"><div class="mc-bar-fill" id="m-roas-b" style="background:#7c5cfc"></div></div>
@@ -992,14 +992,12 @@ let apiPanelOpen = false;
 let currentModal = null;
 
 function fmtRp(n) {
-  if (n>=1e9) return 'Rp'+(n/1e9).toFixed(1)+'M';
-  if (n>=1e6) return 'Rp'+(n/1e6).toFixed(0)+'jt';
-  return 'Rp'+n.toLocaleString('id-ID');
+  if (!n || n === 0) return 'Rp0';
+  return 'Rp' + Math.round(n).toLocaleString('id-ID');
 }
 function fmtImp(n) {
-  if (n>=1e6) return (n/1e6).toFixed(1)+'M';
-  if (n>=1e3) return (n/1e3).toFixed(0)+'K';
-  return String(n);
+  if (!n || n === 0) return '0';
+  return Math.round(n).toLocaleString('id-ID');
 }
 function budgetColor(p) { return p>80?'#f75c5c':p>50?'#f5a623':'#22d3a0'; }
 
@@ -1251,7 +1249,8 @@ function renderPlatformCards() {
   container.innerHTML = platforms.map(p => {
     const data = ALL_DATA.filter(a=>a.platform===p);
     const totalSpend = data.reduce((s,a)=>s+a.spend,0);
-    const avgCtr = data.length ? (data.reduce((s,a)=>s+a.ctr,0)/data.length).toFixed(1) : '0';
+    const totalLeads = data.reduce((s,a)=>s+(a.leads||0),0);
+    const avgCpr = totalLeads > 0 ? Math.round(totalSpend/totalLeads) : 0;
     const conn = isConnected(p);
     const pl = PLATFORMS[p];
     const isSel = currentPlatform===p;
@@ -1273,12 +1272,12 @@ function renderPlatformCards() {
             <div class="pb-metric-val">${fmtRp(totalSpend)}</div>
           </div>
           <div class="pb-metric">
-            <div class="pb-metric-label">Avg CTR</div>
-            <div class="pb-metric-val">${avgCtr}%</div>
+            <div class="pb-metric-label">Total Hasil</div>
+            <div class="pb-metric-val">${totalLeads.toLocaleString('id-ID')}</div>
           </div>
           <div class="pb-metric">
-            <div class="pb-metric-label">Status</div>
-            <div class="pb-metric-val" style="font-size:12px;color:${conn?'#22d3a0':'#7a8099'}">${conn?'API Active':'Demo'}</div>
+            <div class="pb-metric-label">Avg CPR</div>
+            <div class="pb-metric-val">${avgCpr > 0 ? fmtRp(avgCpr) : '–'}</div>
           </div>
         </div>
         ${!conn?`<button class="pb-connect-btn" onclick="event.stopPropagation();openModal('${p}')">+ Hubungkan ${pl.label}</button>`:''}
@@ -1290,20 +1289,20 @@ function renderPlatformCards() {
 function renderMetrics(data) {
   const total = data.length;
   const spend = data.reduce((s,a)=>s+a.spend,0);
-  const ctr = total ? (data.reduce((s,a)=>s+a.ctr,0)/total).toFixed(1) : '0';
-  const roas = total ? (data.reduce((s,a)=>s+a.roas,0)/total).toFixed(1) : '0';
+  const totalLeads = data.reduce((s,a)=>s+(a.leads||0),0);
+  const avgCpr = totalLeads > 0 ? Math.round(spend / totalLeads) : 0;
   document.getElementById('m-total').textContent = total;
   document.getElementById('m-total-d').innerHTML = '<span class="up">▲ aktif: '+data.filter(a=>a.status==='Aktif').length+'</span>';
   document.getElementById('m-total-b').style.width = Math.min(100,(total/12*100)).toFixed(0)+'%';
   document.getElementById('m-spend').textContent = fmtRp(spend);
   document.getElementById('m-spend-d').innerHTML = '<span class="up">▲ +8,3% vs bulan lalu</span>';
   document.getElementById('m-spend-b').style.width = '65%';
-  document.getElementById('m-ctr').textContent = ctr+'%';
-  document.getElementById('m-ctr-d').innerHTML = '<span class="'+(parseFloat(ctr)>3?'up':'dn')+'">'+ctr+'% rata-rata</span>';
-  document.getElementById('m-ctr-b').style.width = (parseFloat(ctr)/6*100).toFixed(0)+'%';
-  document.getElementById('m-roas').textContent = roas+'x';
-  document.getElementById('m-roas-d').innerHTML = '<span class="up">▲ +0,3x vs bulan lalu</span>';
-  document.getElementById('m-roas-b').style.width = (parseFloat(roas)/6*100).toFixed(0)+'%';
+  document.getElementById('m-ctr').textContent = totalLeads.toLocaleString('id-ID');
+  document.getElementById('m-ctr-d').innerHTML = '<span class="up">total hasil/purchase</span>';
+  document.getElementById('m-ctr-b').style.width = Math.min(100, totalLeads > 0 ? 70 : 0)+'%';
+  document.getElementById('m-roas').textContent = avgCpr > 0 ? fmtRp(avgCpr) : '–';
+  document.getElementById('m-roas-d').innerHTML = avgCpr > 0 ? '<span class="up">biaya per hasil</span>' : '<span>belum ada hasil</span>';
+  document.getElementById('m-roas-b').style.width = avgCpr > 0 ? '55%' : '0%';
 }
 
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
