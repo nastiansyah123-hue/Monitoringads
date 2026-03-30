@@ -342,8 +342,6 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
   .metrics{grid-template-columns:1fr 1fr;gap:8px;}
   .platform-breakdown{grid-template-columns:1fr;}
   .grid2{grid-template-columns:1fr;gap:10px;}
-  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  table{min-width:580px;}
   .mc{padding:12px;}
   .mc-val{font-size:18px;}
   .adv-id{display:none;}
@@ -352,9 +350,9 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
   .welcome-box{width:100%;max-width:100%;}
   .modal{width:calc(100vw - 28px);}
   #date-picker-wrap-akun .date-dropdown,#date-picker-wrap-kamp .date-dropdown{width:calc(100vw - 28px);}
-  .app-layout{padding-bottom:60px;}
-  /* Kartu akun grid 1 kolom di HP */
   #akun-list > div{grid-template-columns:1fr!important;}
+  #adv-table-wrap{display:none!important;}
+  #adv-mobile-list{display:block!important;}
 }
 </style>
 </head>
@@ -793,7 +791,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
             </div>
             <input class="search" type="text" id="search" placeholder="Cari advertiser..." oninput="filterTable()">
           </div>
-          <div class="table-wrap">
+          <div class="table-wrap" id="adv-table-wrap">
             <table>
               <thead>
                 <tr>
@@ -811,6 +809,8 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
               <tbody id="adv-body"></tbody>
             </table>
           </div>
+          <!-- Mobile card list -->
+          <div id="adv-mobile-list" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -1783,6 +1783,8 @@ function renderTable(data) {
   const sorted = getSorted(data);
   const platformBadge = p => `<span class="badge badge-${p}">${p==='meta'?'Meta':p==='google'?'Google':'TikTok'}</span>`;
   const statusBadge = s => `<span class="badge badge-${s.toLowerCase()}">${s}</span>`;
+
+  // Desktop table
   document.getElementById('adv-body').innerHTML = sorted.map(a=>`
     <tr>
       <td><div class="adv-name">${a.name}</div><div class="adv-id">${a.id}</div></td>
@@ -1827,6 +1829,78 @@ function renderTable(data) {
       <td><button class="action-btn" onclick="openKampanye('${a.id}')">Detail</button></td>
     </tr>
   `).join('');
+
+  // Mobile card list
+  const mobileEl = document.getElementById('adv-mobile-list');
+  if (!mobileEl) return;
+  mobileEl.innerHTML = sorted.map(a => {
+    const cfg = manualLimits[a.id] || {};
+    const limit = cfg.limit || 0;
+    const spendSejak = cfg.spendSaatSet != null ? Math.max(0, (a.amountSpentRp||a.spend||0) - cfg.spendSaatSet) : 0;
+    const saldoTertunggak = (cfg.saldoAwal||0) + spendSejak;
+    const sisa = Math.max(0, limit - saldoTertunggak);
+    const pct = limit > 0 ? Math.min(100, Math.round(saldoTertunggak/limit*100)) : 0;
+    const col = pct>=90?'#f75c5c':pct>=70?'#f5a623':'#22d3a0';
+    const spendAPI = a.amountSpentRp||a.spend||0;
+    return `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-size:14px;font-weight:600">${a.name}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.id}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <span class="badge badge-${a.platform}">${a.platform==='meta'?'Meta':a.platform==='google'?'Google':'TikTok'}</span>
+            <span class="badge badge-${a.status.toLowerCase()}">${a.status}</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:var(--surface2);border-radius:8px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Spend</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtRp(a.spend)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Hasil</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0).toLocaleString('id-ID')}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">CPR</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0)>0?fmtRp(Math.round(a.spend/a.leads)):'–'}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:var(--surface2);border-radius:8px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Impresi</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtImp(a.imp)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:8px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Sisa Budget</div>
+            <div style="font-size:13px;font-weight:500;font-family:var(--mono);color:${limit>0?col:'var(--text3)'}">${limit>0?fmtRp(sisa):'Belum diset'}</div>
+          </div>
+        </div>
+        ${limit > 0 ? `
+        <div style="background:var(--surface2);border-radius:8px;padding:8px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--mono);margin-bottom:4px">
+            <span style="color:var(--text2)">Saldo tertunggak: <span style="color:${col}">${fmtRp(saldoTertunggak)}</span></span>
+            <span style="color:${col};font-weight:500">${pct}%</span>
+          </div>
+          <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:4px">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:3px"></div>
+          </div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Limit: ${fmtRp(limit)}</div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <input type="number" id="mob-bayar-${a.id}" placeholder="Sudah bayar berapa?"
+              style="font-family:var(--mono);font-size:12px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);flex:1">
+            <button onclick="sudahBayarMobile('${a.id}',${spendAPI})"
+              style="font-size:12px;padding:7px 14px;border-radius:7px;border:none;background:#22d3a0;color:white;cursor:pointer;font-family:var(--sans);font-weight:500;flex-shrink:0">Bayar</button>
+          </div>
+        </div>` : ''}
+        <button onclick="openKampanye('${a.id}')" style="width:100%;font-size:13px;padding:9px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-family:var(--sans)">
+          Lihat kampanye →
+        </button>
+      </div>
+    `;
+  }).join('');
 }
 
 function setFilter(el, f) {
@@ -1847,6 +1921,24 @@ function toggleEditLimit(id) {
   if (!edit) return;
   const isOpen = edit.style.display !== 'none';
   edit.style.display = isOpen ? 'none' : 'block';
+}
+
+async function sudahBayarMobile(id, currentSpend) {
+  const input = document.getElementById('mob-bayar-'+id);
+  const nominal = parseFloat(input?.value || 0);
+  if (!nominal || nominal <= 0) { alert('Masukkan nominal pembayaran'); return; }
+  const cfg = manualLimits[id] || {};
+  const spendSejak = cfg.spendSaatSet != null ? Math.max(0, currentSpend - cfg.spendSaatSet) : 0;
+  const saldoTertunggak = (cfg.saldoAwal||0) + spendSejak;
+  const sisaSaldo = Math.max(0, saldoTertunggak - nominal);
+  const riwayat = cfg.riwayatBayar || [];
+  riwayat.push({ nominal, tanggal: new Date().toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}) });
+  manualLimits[id] = { ...cfg, saldoAwal: sisaSaldo, spendSaatSet: currentSpend, riwayatBayar: riwayat.slice(-10) };
+  localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+  renderTable(getFiltered());
+  if (currentUser) {
+    sb.from('account_limits').upsert({ user_id:currentUser.id, account_id:id, limit_amount:cfg.limit||0, saldo_awal:sisaSaldo, spend_saat_set:currentSpend, updated_at:new Date().toISOString() }, { onConflict:'user_id,account_id' }).catch(()=>{});
+  }
 }
 
 async function sudahBayarTabel(id, currentSpend) {
