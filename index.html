@@ -1199,6 +1199,11 @@ function initApp() {
     updateCounts();
     initDatePicker();
     renderAll();
+
+    // Restore halaman terakhir
+    const lastView = localStorage.getItem('admonitor_last_view') || 'dashboard';
+    showView(lastView);
+
     if (isConnected('meta') && welcomeSelected.has('meta')) {
       const cached = loadMetaCache();
       if (cached && cached.length) {
@@ -2173,6 +2178,9 @@ function backToWelcome() {
 
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
+  // Simpan view aktif ke localStorage
+  localStorage.setItem('admonitor_last_view', view);
+
   // Sembunyikan semua view dalam .main
   document.getElementById('main-view').style.display = 'none';
   document.getElementById('view-akun').style.display = 'none';
