@@ -801,7 +801,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
                   <th style="width:8%;cursor:pointer;user-select:none" onclick="sortTable('leads')" id="th-leads">Hasil <span class="sort-icon" id="si-leads"></span></th>
                   <th style="width:10%;cursor:pointer;user-select:none" onclick="sortTable('cpr')" id="th-cpr">CPR <span class="sort-icon" id="si-cpr"></span></th>
                   <th style="width:11%;cursor:pointer;user-select:none" onclick="sortTable('imp')" id="th-imp">Impresi <span class="sort-icon" id="si-imp"></span></th>
-                  <th style="width:9%;cursor:pointer;user-select:none" onclick="sortTable('budget')" id="th-budget">Budget <span class="sort-icon" id="si-budget"></span></th>
+                  <th style="width:16%;cursor:pointer;user-select:none" onclick="sortTable('budget')" id="th-budget">Budget / Sisa <span class="sort-icon" id="si-budget"></span></th>
                   <th style="width:7%">Aksi</th>
                 </tr>
               </thead>
@@ -1761,10 +1761,28 @@ function renderTable(data) {
       <td class="num">${(a.leads||0)>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</td>
       <td class="num">${fmtImp(a.imp)}</td>
       <td>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div class="prog" style="flex:1"><div class="prog-fill" style="width:${a.budget}%;background:${budgetColor(a.budget)}"></div></div>
-          <span class="num" style="font-size:10px;color:var(--text2);width:26px;text-align:right">${a.budget}%</span>
-        </div>
+        ${a.jangkauanSaldo > 0 ? `
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:100px">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div class="prog" style="flex:1"><div class="prog-fill" style="width:${a.budget}%;background:${budgetColor(a.budget)}"></div></div>
+              <span class="num" style="font-size:10px;color:${budgetColor(a.budget)};width:28px;text-align:right;font-weight:500">${a.budget}%</span>
+            </div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">
+              Sisa: <span style="color:${budgetColor(a.budget)};font-weight:500">${fmtRp(a.sisaBudget)}</span>
+            </div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">
+              Limit: ${fmtRp(a.jangkauanSaldo)}
+            </div>
+          </div>
+        ` : a.spendCap > 0 ? `
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:100px">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div class="prog" style="flex:1"><div class="prog-fill" style="width:${a.budget}%;background:${budgetColor(a.budget)}"></div></div>
+              <span class="num" style="font-size:10px;color:${budgetColor(a.budget)};width:28px;text-align:right">${a.budget}%</span>
+            </div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">Sisa: ${fmtRp(a.sisaBudget)}</div>
+          </div>
+        ` : `<span style="font-size:11px;color:var(--text3)">Tidak ada limit</span>`}
       </td>
       <td><button class="action-btn" onclick="openKampanye('${a.id}')">Detail</button></td>
     </tr>
