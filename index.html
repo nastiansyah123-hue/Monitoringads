@@ -505,9 +505,13 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <div id="nav-kampanye-list" style="padding:0 8px 4px 28px;display:flex;flex-direction:column;gap:2px;"></div>
       </div>
 
-      <button class="nav-item" id="nav-advertiser" onclick="showView('advertiser')">
+      <button class="nav-item" id="nav-advertisers" onclick="showView('advertisers')">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-        Advertiser
+        Advertisers
+      </button>
+      <button class="nav-item" id="nav-adaccounts" onclick="showView('adaccounts')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
+        Ad Accounts
       </button>
     </div>
     <div class="nav-section">
@@ -933,63 +937,106 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       </div>
     </div>
 
-    <!-- View: Advertiser Management -->
-    <div id="view-advertiser" style="display:none;">
+    <!-- View: Advertisers -->
+    <div id="view-advertisers" style="display:none">
       <div class="page-header">
-        <div class="page-title">
-          <h1>Advertiser</h1>
-          <p>Data karyawan, nomor WA, dan akun iklan mereka</p>
-        </div>
+        <div class="page-title"><h1>Advertisers</h1><p>Kelola data advertiser</p></div>
+        <button class="btn btn-primary btn-sm" onclick="openAdvModal()">+ Tambah Advertiser</button>
       </div>
       <div class="content">
-
-        <!-- Form tambah/edit — selalu tampil -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px;">
-          <div style="font-size:14px;font-weight:600;margin-bottom:16px" id="adv-form-title">+ Tambah Advertiser</div>
-          
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-            <div>
-              <label style="font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:500">Nama Karyawan</label>
-              <input id="adv-form-name" type="text" placeholder="Contoh: Ahmad Fauzi"
-                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);outline:none;box-sizing:border-box">
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:500">Nomor WhatsApp</label>
-              <input id="adv-form-wa" type="text" placeholder="Contoh: 628123456789"
-                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);outline:none;box-sizing:border-box">
-            </div>
-          </div>
-
-          <div style="margin-bottom:16px">
-            <label style="font-size:12px;color:var(--text2);margin-bottom:6px;display:block;font-weight:500">
-              Akun Iklan yang Dikelola
-              <span style="font-weight:400;color:var(--text3)"> — bisa pilih lebih dari satu</span>
-            </label>
-            <div id="adv-form-accounts" style="max-height:220px;overflow-y:auto;border:1px solid var(--border2);border-radius:8px;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--surface2)">
-              <div style="font-size:12px;color:var(--text3);padding:8px;grid-column:1/-1">Memuat akun iklan...</div>
-            </div>
-          </div>
-
-          <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="saveAdvertiser()" style="padding:9px 24px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)" id="adv-save-btn">
-              Simpan
-            </button>
-            <button onclick="resetAdvertiserForm()" style="padding:9px 16px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--sans)">
-              Reset
-            </button>
-            <span id="adv-form-msg" style="font-size:12px;margin-left:4px"></span>
-          </div>
-        </div>
-
-        <!-- Daftar advertiser -->
         <div class="table-card">
           <div class="card-head">
             <div class="card-title">Daftar Advertiser</div>
-            <input type="text" id="search-advertiser" placeholder="Cari..." class="search" style="width:160px" oninput="filterAdvertiser()">
+            <input type="text" id="search-adv" placeholder="Cari..." class="search" style="width:180px" oninput="filterAdv()">
           </div>
-          <div id="advertiser-list">
-            <div style="padding:40px;text-align:center;color:var(--text2)">Memuat data...</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Nama Advertiser</th>
+                <th>PIC</th>
+                <th>No. WA / Phone</th>
+                <th>Aksi</th>
+              </tr></thead>
+              <tbody id="adv-tbody"><tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Memuat...</td></tr></tbody>
+            </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View: Ad Accounts -->
+    <div id="view-adaccounts" style="display:none">
+      <div class="page-header">
+        <div class="page-title"><h1>Ad Accounts</h1><p>Mapping akun iklan ke advertiser</p></div>
+        <button class="btn btn-primary btn-sm" onclick="openAccModal()">+ Tambah Ad Account</button>
+      </div>
+      <div class="content">
+        <div class="table-card">
+          <div class="card-head">
+            <div class="card-title">Daftar Ad Account</div>
+            <input type="text" id="search-acc" placeholder="Cari..." class="search" style="width:180px" oninput="filterAcc()">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Account ID</th>
+                <th>Nama Akun</th>
+                <th>Advertiser</th>
+                <th>Aksi</th>
+              </tr></thead>
+              <tbody id="acc-tbody"><tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Memuat...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Advertiser -->
+    <div id="adv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+      <div style="background:var(--surface);border-radius:12px;padding:24px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+        <div style="font-size:15px;font-weight:600;margin-bottom:18px" id="adv-modal-title">Tambah Advertiser</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Nama Advertiser *</label>
+          <input id="adv-f-name" type="text" placeholder="PT Herbal Jaya / Alfan" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Nama PIC</label>
+          <input id="adv-f-pic" type="text" placeholder="Nama penanggung jawab" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">No. WA / Phone</label>
+          <input id="adv-f-phone" type="text" placeholder="628123456789" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
+        </div>
+        <div id="adv-modal-err" style="font-size:12px;color:#f75c5c;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closeAdvModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:13px">Batal</button>
+          <button onclick="saveAdv()" id="adv-modal-btn" style="padding:8px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500">Simpan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Ad Account -->
+    <div id="acc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+      <div style="background:var(--surface);border-radius:12px;padding:24px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+        <div style="font-size:15px;font-weight:600;margin-bottom:18px" id="acc-modal-title">Tambah Ad Account</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Ad Account ID *</label>
+          <input id="acc-f-id" type="text" placeholder="act_123456789" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Nama Akun *</label>
+          <input id="acc-f-name" type="text" placeholder="Herbal Jaya 89 (Freelance Alfan)" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Assign ke Advertiser</label>
+          <select id="acc-f-adv" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+            <option value="">-- Pilih Advertiser --</option>
+          </select>
+        </div>
+        <div id="acc-modal-err" style="font-size:12px;color:#f75c5c;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closeAccModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:13px">Batal</button>
+          <button onclick="saveAcc()" id="acc-modal-btn" style="padding:8px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500">Simpan</button>
         </div>
       </div>
     </div>
@@ -1017,7 +1064,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 
 <script>
 function setMobileNav(active) {
-  ['dashboard','akun','advertiser','config'].forEach(v => {
+  ['dashboard','akun','advertisers','config'].forEach(v => {
     const el = document.getElementById('mob-'+v);
     if (el) el.classList.toggle('active', v===active);
   });
@@ -2157,208 +2204,145 @@ async function loadManualLimits() {
   } catch(e) { console.warn('loadManualLimits error:', e); }
 }
 
-// ── Advertiser Management ─────────────────────────────────────────
-let advertiserEditId = null;
+// ── Advertisers & Ad Accounts ─────────────────────────────────────
+let advEditId = null;
+let accEditId = null;
 
-function resetAdvertiserForm() {
-  advertiserEditId = null;
-  document.getElementById('adv-form-title').textContent = '+ Tambah Advertiser';
-  document.getElementById('adv-form-name').value = '';
-  document.getElementById('adv-form-wa').value = '';
-  document.getElementById('adv-form-msg').textContent = '';
-  document.getElementById('adv-form-msg').style.color = '';
-  document.querySelectorAll('#adv-form-accounts input[type=checkbox]').forEach(c => c.checked = false);
+// --- Advertisers ---
+function openAdvModal(data) {
+  advEditId = data?.id || null;
+  document.getElementById('adv-modal-title').textContent = data ? 'Edit Advertiser' : 'Tambah Advertiser';
+  document.getElementById('adv-f-name').value = data?.name || '';
+  document.getElementById('adv-f-pic').value = data?.pic_name || '';
+  document.getElementById('adv-f-phone').value = data?.pic_phone || '';
+  document.getElementById('adv-modal-err').textContent = '';
+  document.getElementById('adv-modal').style.display = 'flex';
 }
+function closeAdvModal() { document.getElementById('adv-modal').style.display = 'none'; }
 
-function showAddAdvertiser() { resetAdvertiserForm(); }
-function hideAddAdvertiser() { resetAdvertiserForm(); }
-
-function populateAccountDropdown() {
-  const wrap = document.getElementById('adv-form-accounts');
-  if (!wrap) return;
-  if (!ALL_DATA.length) {
-    wrap.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px;grid-column:1/-1">Belum ada akun iklan. Hubungkan Meta Ads dulu.</div>';
-    return;
-  }
-  const currentChecked = [...document.querySelectorAll('#adv-form-accounts input[type=checkbox]:checked')].map(c => c.value);
-  wrap.innerHTML = ALL_DATA.map(a => `
-    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;background:var(--surface);border:1px solid var(--border);">
-      <input type="checkbox" value="${a.id}" data-name="${a.name}" style="flex-shrink:0;accent-color:#4f8ef7;width:14px;height:14px" ${currentChecked.includes(a.id)?'checked':''}>
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name}</span>
-    </label>
-  `).join('');
-}
-
-async function saveAdvertiser() {
-  const name = document.getElementById('adv-form-name').value.trim();
-  const wa = document.getElementById('adv-form-wa').value.trim();
-  const msgEl = document.getElementById('adv-form-msg');
-  const btn = document.getElementById('adv-save-btn');
-  msgEl.textContent = '';
-
-  if (!name) { msgEl.style.color='#f75c5c'; msgEl.textContent='Nama wajib diisi'; return; }
-  if (!wa) { msgEl.style.color='#f75c5c'; msgEl.textContent='Nomor WA wajib diisi'; return; }
-
-  const checked = [...document.querySelectorAll('#adv-form-accounts input[type=checkbox]:checked')];
-  const accounts = checked.map(c => ({ id: c.value, name: c.dataset.name }));
-
+async function saveAdv() {
+  const name = document.getElementById('adv-f-name').value.trim();
+  const pic_name = document.getElementById('adv-f-pic').value.trim();
+  const pic_phone = document.getElementById('adv-f-phone').value.trim();
+  const errEl = document.getElementById('adv-modal-err');
+  const btn = document.getElementById('adv-modal-btn');
+  if (!name) { errEl.textContent = 'Nama wajib diisi'; return; }
   btn.disabled = true; btn.textContent = 'Menyimpan...';
-
-  const row = {
-    user_id: currentUser?.id,
-    name, wa,
-    accounts: JSON.stringify(accounts),
-    updated_at: new Date().toISOString()
-  };
-
-  try {
-    if (advertiserEditId) {
-      const { error } = await sb.from('advertisers').update(row).eq('id', advertiserEditId);
-      if (error) throw error;
-    } else {
-      const { error } = await sb.from('advertisers').insert(row);
-      if (error) throw error;
-    }
-    msgEl.style.color = '#22d3a0';
-    msgEl.textContent = advertiserEditId ? 'Berhasil diupdate!' : 'Berhasil disimpan!';
-    resetAdvertiserForm();
-    loadAdvertiserList();
-  } catch(e) {
-    msgEl.style.color = '#f75c5c';
-    msgEl.textContent = 'Error: ' + e.message;
-  }
+  const row = { user_id: currentUser?.id, name, pic_name, pic_phone };
+  const { error } = advEditId
+    ? await sb.from('advertisers').update(row).eq('id', advEditId)
+    : await sb.from('advertisers').insert(row);
   btn.disabled = false; btn.textContent = 'Simpan';
+  if (error) { errEl.textContent = error.message; return; }
+  closeAdvModal();
+  loadAdvList();
 }
 
-async function loadAdvertiserList() {
-  const el = document.getElementById('advertiser-list');
-  if (!el) return;
-
-  if (!currentUser) {
-    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Silakan login terlebih dahulu.</div>';
-    return;
-  }
-
-  el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat...</div>';
-
-  try {
-    const { data, error } = await sb.from('advertisers').select('*').eq('user_id', currentUser.id).order('name');
-
-    if (error) {
-      // Tabel belum dibuat
-      if (error.code === '42P01' || error.message?.includes('does not exist')) {
-        el.innerHTML = `
-          <div style="padding:40px;text-align:center">
-            <div style="font-size:14px;font-weight:600;margin-bottom:8px">Tabel belum siap</div>
-            <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Jalankan SQL ini di Supabase SQL Editor:</div>
-            <code style="display:block;background:var(--surface2);padding:12px;border-radius:8px;font-size:11px;text-align:left;white-space:pre-wrap;font-family:var(--mono)">create table advertisers (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users,
-  name text not null,
-  wa text not null,
-  accounts jsonb default '[]',
-  updated_at timestamp default now()
-);
-alter table advertisers enable row level security;
-create policy "user akses sendiri" on advertisers
-  for all using (auth.uid() = user_id);</code>
-          </div>`;
-        return;
-      }
-      el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--red-text)">Error: ${error.message}</div>`;
-      return;
-    }
-
-    if (!data?.length) {
-      el.innerHTML = `
-        <div style="padding:40px;text-align:center">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="var(--text3)" style="margin-bottom:12px"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-          <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">Belum ada advertiser</div>
-          <div style="font-size:12px;color:var(--text3)">Klik "+ Tambah Advertiser" untuk menambahkan</div>
-        </div>`;
-      return;
-    }
-
-    el.innerHTML = `
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Nama Advertiser</th>
-              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">WhatsApp</th>
-              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Akun Iklan</th>
-              <th style="padding:10px 16px;border-bottom:1px solid var(--border);width:120px">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(adv => {
-              const accounts = JSON.parse(adv.accounts || '[]');
-              return `
-                <tr>
-                  <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
-                    <div style="font-size:13px;font-weight:500">${adv.name}</div>
-                  </td>
-                  <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
-                    <a href="https://wa.me/${adv.wa.replace(/\D/g,'')}" target="_blank"
-                      style="display:inline-flex;align-items:center;gap:6px;color:#22d3a0;font-family:var(--mono);font-size:12px;text-decoration:none">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#22d3a0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L0 24l6.337-1.504A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.68-.52-5.21-1.42l-.37-.22-3.86.916.978-3.77-.24-.39A10 10 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-                      ${adv.wa}
-                    </a>
-                  </td>
-                  <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
-                    <div style="display:flex;flex-wrap:wrap;gap:4px">
-                      ${accounts.length ? accounts.map(a =>
-                        `<span style="font-size:10px;padding:2px 8px;border-radius:100px;background:var(--meta-bg);color:var(--meta-text);white-space:nowrap">${a.name}</span>`
-                      ).join('') : '<span style="font-size:11px;color:var(--text3)">Belum ada akun</span>'}
-                    </div>
-                    <div style="font-size:10px;color:var(--text3);margin-top:3px">${accounts.length} akun iklan</div>
-                  </td>
-                  <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
-                    <div style="display:flex;gap:6px">
-                      <button onclick="editAdvertiser('${adv.id}')" style="font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-family:var(--sans)">Edit</button>
-                      <button onclick="deleteAdvertiser('${adv.id}')" style="font-size:11px;padding:5px 12px;border-radius:6px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer;font-family:var(--sans)">Hapus</button>
-                    </div>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>`;
-  } catch(e) {
-    el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--red-text)">Error: ${e.message}</div>`;
-  }
+async function loadAdvList() {
+  const tbody = document.getElementById('adv-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text2)">Memuat...</td></tr>';
+  const { data, error } = await sb.from('advertisers').select('*').eq('user_id', currentUser?.id).order('name');
+  if (error) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:#f75c5c">${error.message}</td></tr>`; return; }
+  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Belum ada advertiser. Klik "+ Tambah Advertiser"</td></tr>'; return; }
+  tbody.innerHTML = data.map(d => `
+    <tr>
+      <td><div style="font-weight:500">${d.name}</div></td>
+      <td>${d.pic_name || '-'}</td>
+      <td style="font-family:var(--mono)">${d.pic_phone || '-'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button onclick="openAdvModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" class="action-btn">Edit</button>
+          <button onclick="deleteAdv('${d.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer;font-family:var(--sans)">Hapus</button>
+        </div>
+      </td>
+    </tr>`).join('');
 }
 
-function filterAdvertiser() {
-  const q = document.getElementById('search-advertiser').value.toLowerCase();
-  document.querySelectorAll('#advertiser-list tbody tr').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+async function deleteAdv(id) {
+  if (!confirm('Hapus advertiser ini?')) return;
+  await sb.from('advertisers').delete().eq('id', id);
+  loadAdvList();
+}
+
+function filterAdv() {
+  const q = document.getElementById('search-adv').value.toLowerCase();
+  document.querySelectorAll('#adv-tbody tr').forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
+}
+
+// --- Ad Accounts ---
+function openAccModal(data) {
+  accEditId = data?.id || null;
+  document.getElementById('acc-modal-title').textContent = data ? 'Edit Ad Account' : 'Tambah Ad Account';
+  document.getElementById('acc-f-id').value = data?.ad_account_id || '';
+  document.getElementById('acc-f-name').value = data?.account_name || '';
+  document.getElementById('acc-modal-err').textContent = '';
+  loadAdvOptions(data?.advertiser_id);
+  document.getElementById('acc-modal').style.display = 'flex';
+}
+function closeAccModal() { document.getElementById('acc-modal').style.display = 'none'; }
+
+async function loadAdvOptions(selectedId) {
+  const sel = document.getElementById('acc-f-adv');
+  sel.innerHTML = '<option value="">-- Pilih Advertiser --</option>';
+  const { data } = await sb.from('advertisers').select('id,name').eq('user_id', currentUser?.id).order('name');
+  if (data) data.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id; opt.textContent = d.name;
+    if (d.id === selectedId) opt.selected = true;
+    sel.appendChild(opt);
   });
 }
 
-async function editAdvertiser(id) {
-  const { data } = await sb.from('advertisers').select('*').eq('id', id).single();
-  if (!data) return;
-  advertiserEditId = id;
-  document.getElementById('adv-form-title').textContent = 'Edit: ' + data.name;
-  document.getElementById('adv-form-name').value = data.name;
-  document.getElementById('adv-form-wa').value = data.wa;
-  document.getElementById('adv-form-msg').textContent = '';
-  populateAccountDropdown();
-  const saved = JSON.parse(data.accounts || '[]').map(a => a.id);
-  setTimeout(() => {
-    document.querySelectorAll('#adv-form-accounts input[type=checkbox]').forEach(c => {
-      c.checked = saved.includes(c.value);
-    });
-  }, 100);
-  document.getElementById('adv-form-name').scrollIntoView({ behavior:'smooth', block:'start' });
+async function saveAcc() {
+  const ad_account_id = document.getElementById('acc-f-id').value.trim();
+  const account_name = document.getElementById('acc-f-name').value.trim();
+  const advertiser_id = document.getElementById('acc-f-adv').value;
+  const errEl = document.getElementById('acc-modal-err');
+  const btn = document.getElementById('acc-modal-btn');
+  if (!ad_account_id) { errEl.textContent = 'Account ID wajib diisi'; return; }
+  if (!account_name) { errEl.textContent = 'Nama akun wajib diisi'; return; }
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  const row = { user_id: currentUser?.id, ad_account_id, account_name, advertiser_id: advertiser_id || null };
+  const { error } = accEditId
+    ? await sb.from('ad_accounts').update(row).eq('id', accEditId)
+    : await sb.from('ad_accounts').insert(row);
+  btn.disabled = false; btn.textContent = 'Simpan';
+  if (error) { errEl.textContent = error.message; return; }
+  closeAccModal();
+  loadAccList();
 }
 
-async function deleteAdvertiser(id) {
-  if (!confirm('Hapus advertiser ini?')) return;
-  await sb.from('advertisers').delete().eq('id', id);
-  loadAdvertiserList();
+async function loadAccList() {
+  const tbody = document.getElementById('acc-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text2)">Memuat...</td></tr>';
+  const { data, error } = await sb.from('ad_accounts').select('*, advertisers(name)').eq('user_id', currentUser?.id).order('account_name');
+  if (error) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:#f75c5c">${error.message}</td></tr>`; return; }
+  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2)">Belum ada ad account.</td></tr>'; return; }
+  tbody.innerHTML = data.map(d => `
+    <tr>
+      <td style="font-family:var(--mono);font-size:12px">${d.ad_account_id}</td>
+      <td style="font-weight:500">${d.account_name}</td>
+      <td>${d.advertisers?.name || '<span style="color:var(--text3)">Belum assign</span>'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button onclick="openAccModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" class="action-btn">Edit</button>
+          <button onclick="deleteAcc('${d.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer;font-family:var(--sans)">Hapus</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function deleteAcc(id) {
+  if (!confirm('Hapus ad account ini?')) return;
+  await sb.from('ad_accounts').delete().eq('id', id);
+  loadAccList();
+}
+
+function filterAcc() {
+  const q = document.getElementById('search-acc').value.toLowerCase();
+  document.querySelectorAll('#acc-tbody tr').forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
 }
 
 // ── Sort ──────────────────────────────────────────────────────────
@@ -2473,11 +2457,11 @@ function backToWelcome() {
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
   localStorage.setItem('admonitor_last_view', view);
-  ['main-view','view-akun','view-kampanye','view-advertiser'].forEach(id => {
+  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  ['dashboard','akun','advertiser'].forEach(v => {
+  ['dashboard','akun','advertisers','adaccounts'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if (el) el.classList.remove('active');
   });
@@ -2494,12 +2478,16 @@ function showView(view) {
   } else if (view === 'kampanye') {
     document.getElementById('view-kampanye').style.display = 'block';
     document.getElementById('nav-akun').classList.add('active');
-  } else if (view === 'advertiser') {
-    document.getElementById('view-advertiser').style.display = 'block';
-    document.getElementById('nav-advertiser').classList.add('active');
+  } else if (view === 'advertisers') {
+    document.getElementById('view-advertisers').style.display = 'block';
+    document.getElementById('nav-advertisers').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
-    loadAdvertiserList();
-    populateAccountDropdown();
+    loadAdvList();
+  } else if (view === 'adaccounts') {
+    document.getElementById('view-adaccounts').style.display = 'block';
+    document.getElementById('nav-adaccounts').classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
+    loadAccList();
   }
   window.scrollTo(0, 0);
 }
@@ -3105,9 +3093,9 @@ function applyPlatformSelection() {
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
       Akun
     </button>
-    <button class="mobile-nav-btn" id="mob-advertiser" onclick="showView('advertiser');setMobileNav('advertiser')">
+    <button class="mobile-nav-btn" id="mob-advertisers" onclick="showView('advertisers');setMobileNav('advertisers')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-      Advertiser
+      Advertisers
     </button>
     <button class="mobile-nav-btn" id="mob-config" onclick="toggleApiPanel();setMobileNav('config')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
