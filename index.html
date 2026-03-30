@@ -1803,6 +1803,8 @@ async function fetchAndRenderMeta(adAccounts) {
 
   updateCounts();
   renderAll();
+  // Load manual limits dari Supabase dan re-render
+  loadManualLimits();
   document.getElementById('last-update').textContent =
     'Meta: data real (' + dateRange.label + ') · Update: ' +
     new Date().toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'});
@@ -2287,20 +2289,30 @@ async function saveManualLimit(id, currentSpend) {
 async function loadManualLimits() {
   if (!currentUser) return;
   try {
-    const { data } = await sb.from('account_limits')
+    const { data, error } = await sb.from('account_limits')
       .select('account_id,limit_amount,saldo_awal,spend_saat_set')
       .eq('user_id', currentUser.id);
+    if (error) { console.warn('loadManualLimits error:', error.message); return; }
     if (data?.length) {
+      let changed = false;
       data.forEach(r => {
+        const existing = manualLimits[r.account_id];
         manualLimits[r.account_id] = {
           limit: r.limit_amount || 0,
           saldoAwal: r.saldo_awal || 0,
           spendSaatSet: r.spend_saat_set || 0,
-          // Pertahankan riwayat dari localStorage jika ada
-          riwayatBayar: (manualLimits[r.account_id]?.riwayatBayar) || []
+          riwayatBayar: existing?.riwayatBayar || []
         };
+        changed = true;
       });
-      localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+      if (changed) {
+        localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+        // Re-render tabel dan kartu agar budget/sisa muncul
+        renderTable(getFiltered());
+        if (document.getElementById('view-akun')?.style.display !== 'none') {
+          renderAkun(ALL_DATA);
+        }
+      }
     }
   } catch(e) { console.warn('loadManualLimits error:', e); }
 }
