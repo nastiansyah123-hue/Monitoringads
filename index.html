@@ -1138,8 +1138,10 @@ async function saveUserConfig() {
     platforms: [...welcomeSelected],
     updated_at: new Date().toISOString(),
   };
-  await sb.from('user_config').upsert(cfg, { onConflict: 'user_id' });
-  // Simpan juga ke localStorage sebagai cache
+  // Non-blocking — tidak perlu await
+  sb.from('user_config').upsert(cfg, { onConflict: 'user_id' })
+    .then(() => console.log('Config synced to Supabase'))
+    .catch(e => console.warn('Supabase sync failed:', e));
   localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
 }
 
@@ -1324,19 +1326,19 @@ function toggleApiPanel() {
   document.getElementById('api-panel').classList.toggle('open', apiPanelOpen);
 }
 
-function saveTokenFromArea() {
+async function saveTokenFromArea() {
   const area = document.getElementById('cfg-meta-token-area');
   const token = area.value.trim();
   if (!token) { alert('Token kosong!'); return; }
-  // Simpan langsung ke apiConfig dan localStorage
   if (!apiConfig.meta) apiConfig.meta = {};
   apiConfig.meta.token = token;
-  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
-  // Update input field juga
   document.getElementById('cfg-meta-token').value = token;
   area.value = '';
-  updateConnectionStatus();
-  document.getElementById('test-result').textContent = 'Token disimpan! Klik Test Koneksi untuk verifikasi.';
+  saveConfig();
+  const res = document.getElementById('test-result');
+  res.textContent = 'Token disimpan ke perangkat ini. Menyimpan ke Supabase...';
+  await saveUserConfig();
+  res.textContent = '✓ Token tersimpan & sync ke semua perangkat! Klik Test Koneksi untuk verifikasi.';
 }
 
 function toggleCfgToken(id, btn) {
@@ -1417,6 +1419,7 @@ async function testConnections() {
       if (allAccounts.length) {
         cachedMetaAccounts = allAccounts;
         results.push(`Meta ✓ (${allAccounts.length} ad account ditemukan)`);
+        await saveUserConfig(); // Simpan token ke Supabase supaya sync semua device
         await fetchAndRenderMeta(allAccounts);
       } else {
         results.push('Meta ✗ (0 akun — cek permission token)');
@@ -2607,8 +2610,8 @@ function applyPlatformSelection() {
   const loggedIn = await checkSession();
   if (loggedIn) {
     document.getElementById('login-screen').classList.add('hidden');
-    await loadUserConfig();
-    initApp();
+    await loadUserConfig(); // Tunggu sampai config + limits dari Supabase selesai
+    initApp();              // Baru init app dengan data lengkap
   } else {
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('welcome-screen').classList.add('hidden');
@@ -2616,10 +2619,11 @@ function applyPlatformSelection() {
     setTimeout(() => document.getElementById('login-user')?.focus(), 100);
   }
 
-  // Listen auth state changes (auto re-login setelah refresh)
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       currentUser = session.user;
+      await loadUserConfig();
+      initApp();
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
     }
