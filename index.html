@@ -668,6 +668,9 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 
       <div class="content">
 
+        <!-- Budget Alert Bar -->
+        <div id="budget-alert-bar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;"></div>
+
         <!-- Metrics -->
         <div class="metrics">
           <div class="mc">
@@ -1210,7 +1213,7 @@ async function testConnections() {
 
 async function fetchAllMetaAccounts(token) {
   let all = [];
-  let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status&limit=200`;
+  let url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,account_status,spend_cap,amount_spent,daily_spend_limit,currency&limit=200`;
   while (url) {
     const r = await fetch(url);
     const d = await r.json();
@@ -1254,19 +1257,41 @@ async function fetchAndRenderMeta(adAccounts) {
       const hasilType = hasilAction?.action_type || '';
       const cpr = leads > 0 ? Math.round(spend / leads) : 0;
 
+      // Data limit dari akun (sudah di-fetch di fetchAllMetaAccounts)
+      const spendCap = parseFloat(acc.spend_cap || 0);       // Account Spending Limit (dalam sen)
+      const amountSpent = parseFloat(acc.amount_spent || 0); // Total sudah dipakai (dalam sen)
+      const dailyLimit = parseFloat(acc.daily_spend_limit || 0);
+      const currency = acc.currency || 'IDR';
+
+      // Meta simpan nilai dalam sen/100 untuk beberapa currency
+      const divisor = currency === 'IDR' ? 1 : 100;
+      const spendCapRp = spendCap / divisor;
+      const amountSpentRp = amountSpent / divisor;
+      const dailyLimitRp = dailyLimit / divisor;
+
+      // Hitung % budget terpakai
+      const budgetPct = spendCapRp > 0 ? Math.min(100, Math.round((amountSpentRp / spendCapRp) * 100)) : 0;
+      const sisaBudget = spendCapRp > 0 ? Math.max(0, spendCapRp - amountSpentRp) : 0;
+
       return {
         id: acc.id,
         name: acc.name,
         platform: 'meta',
         status: statusMap[acc.account_status] || 'Aktif',
-        spend, imp, clicks, budget: 0,
+        spend, imp, clicks,
+        budget: budgetPct,
+        spendCap: spendCapRp,
+        amountSpent: amountSpentRp,
+        dailyLimit: dailyLimitRp,
+        sisaBudget,
+        currency,
         ctr: imp > 0 ? +((clicks/imp)*100).toFixed(2) : 0,
         roas: 0,
         leads,
         cpr,
       };
     } catch(e) {
-      return { id:acc.id, name:acc.name, platform:'meta', status: statusMap[acc.account_status]||'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0, leads:0, cpr:0 };
+      return { id:acc.id, name:acc.name, platform:'meta', status: statusMap[acc.account_status]||'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0, leads:0, cpr:0, spendCap:0, amountSpent:0, dailyLimit:0, sisaBudget:0 };
     }
   }));
 
@@ -1584,7 +1609,31 @@ function renderAll() {
   renderSpendChart(base);
   renderCtrChart(base);
   renderTable(getFiltered());
+  renderBudgetAlerts(base);
   document.getElementById('last-update').textContent = 'Update: '+new Date().toLocaleString('id-ID',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})+(isConnected('meta')?' · Meta: real data':'  · Data dummy');
+}
+
+function renderBudgetAlerts(data) {
+  const kritis = data.filter(a => a.spendCap > 0 && a.budget >= 90);
+  const hampir = data.filter(a => a.spendCap > 0 && a.budget >= 70 && a.budget < 90);
+  const alertEl = document.getElementById('budget-alert-bar');
+  if (!alertEl) return;
+  if (kritis.length === 0 && hampir.length === 0) { alertEl.style.display='none'; return; }
+  alertEl.style.display = 'block';
+  let html = '';
+  if (kritis.length > 0) {
+    html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${hampir.length>0?'8px':'0'}">
+      <div style="width:8px;height:8px;border-radius:50%;background:#f75c5c;flex-shrink:0;animation:pulse 2s infinite"></div>
+      <span style="font-size:12px;color:#f75c5c"><strong>Kritis (≥90%):</strong> ${kritis.map(a=>`${a.name} (${a.budget}%, sisa ${fmtRp(a.sisaBudget)})`).join(' · ')}</span>
+    </div>`;
+  }
+  if (hampir.length > 0) {
+    html += `<div style="display:flex;align-items:center;gap:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:#f5a623;flex-shrink:0"></div>
+      <span style="font-size:12px;color:#f5a623"><strong>Hampir habis (≥70%):</strong> ${hampir.map(a=>`${a.name} (${a.budget}%, sisa ${fmtRp(a.sisaBudget)})`).join(' · ')}</span>
+    </div>`;
+  }
+  alertEl.innerHTML = html;
 }
 
 function backToWelcome() {
@@ -1671,6 +1720,21 @@ function renderAkun(data) {
               <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${(a.leads||0)>0?fmtRp(Math.round(a.spend/(a.leads||1))):'–'}</div>
             </div>
           </div>
+          ${a.spendCap > 0 ? `
+          <div style="margin-top:10px;padding:8px;background:var(--surface2);border-radius:6px;border-left:3px solid ${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span style="font-size:10px;color:var(--text2)">Budget Limit</span>
+              <span style="font-size:10px;font-family:var(--mono);color:${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'};font-weight:500">${a.budget}% terpakai</span>
+            </div>
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:5px">
+              <div style="height:100%;width:${a.budget}%;border-radius:2px;background:${a.budget>=90?'#f75c5c':a.budget>=70?'#f5a623':'#22d3a0'};transition:width .3s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
+              <span style="color:var(--text2)">Sisa: <span style="color:${a.budget>=90?'#f75c5c':'var(--text)'}">${fmtRp(a.sisaBudget)}</span></span>
+              <span style="color:var(--text3)">Limit: ${fmtRp(a.spendCap)}</span>
+            </div>
+          </div>` : `
+          <div style="margin-top:8px;font-size:10px;color:var(--text3);text-align:center">Belum ada spending limit</div>`}
           <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:10px;gap:6px">
             <span style="font-size:11px;color:var(--text2)">Lihat kampanye</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--text2)"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
