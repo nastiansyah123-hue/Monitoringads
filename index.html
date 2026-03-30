@@ -1300,13 +1300,7 @@ async function fetchAllMetaAccounts(token) {
   while (url) {
     const r = await fetch(url);
     const d = await r.json();
-    if (d.error) {
-      const code = d.error.code;
-      if (code === 190) throw new Error('Token expired — generate token baru di Graph API Explorer');
-      if (code === 100) throw new Error('Permission kurang — pastikan ads_read & business_management dicentang');
-      if (r.status === 400) throw new Error('Request tidak valid — pastikan Business ID dikosongkan');
-      throw new Error(d.error.message || 'API error code ' + code);
-    }
+    if (d.error) throw new Error(d.error.message + ' (code: ' + d.error.code + ')');
     all = all.concat(d.data || []);
     url = d.paging?.next || null;
   }
