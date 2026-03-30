@@ -281,8 +281,8 @@ tr:hover td{background:rgba(255,255,255,0.015);}
             <input class="api-input" type="password" id="cfg-meta-token" placeholder="EAAxxxxxx..." oninput="saveConfig()">
           </div>
           <div class="api-field">
-            <div class="api-label">Business ID</div>
-            <input class="api-input" type="text" id="cfg-meta-biz" placeholder="61576475977702" oninput="saveConfig()">
+            <div class="api-label">Business ID <span style="font-size:10px;color:var(--text3)">(opsional)</span></div>
+            <input class="api-input" type="text" id="cfg-meta-biz" placeholder="Kosongkan jika pakai me/adaccounts" oninput="saveConfig()">
           </div>
         </div>
         <div>
@@ -544,7 +544,7 @@ function loadConfigToInputs() {
 }
 
 function isConnected(p) {
-  if (p==='meta') return !!(apiConfig.meta?.token && apiConfig.meta?.bizId);
+  if (p==='meta') return !!(apiConfig.meta?.token);
   if (p==='google') return !!(apiConfig.google?.token && apiConfig.google?.mccId);
   if (p==='tiktok') return !!(apiConfig.tiktok?.token && apiConfig.tiktok?.advId);
   return false;
@@ -567,15 +567,62 @@ async function testConnections() {
   const results = [];
   if (isConnected('meta')) {
     try {
-      const r = await fetch(`https://graph.facebook.com/v19.0/${apiConfig.meta.bizId}/adaccounts?access_token=${apiConfig.meta.token}&fields=id,name&limit=1`);
+      const r = await fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${apiConfig.meta.token}&fields=id,name,account_status&limit=5`);
       const d = await r.json();
-      results.push(d.data ? 'Meta ✓' : 'Meta ✗ ('+((d.error?.message)||'error')+')');
-    } catch(e) { results.push('Meta ✗'); }
+      if (d.data) {
+        results.push(`Meta ✓ (${d.data.length} ad account ditemukan)`);
+        await fetchAndRenderMeta(d.data);
+      } else {
+        results.push('Meta ✗ (' + (d.error?.message || 'error') + ')');
+      }
+    } catch(e) { results.push('Meta ✗ (network error)'); }
   }
   if (isConnected('google')) results.push('Google → via backend');
   if (isConnected('tiktok')) results.push('TikTok → via backend');
   if (!results.length) res.textContent = 'Belum ada API yang dikonfigurasi.';
   else res.textContent = results.join(' · ');
+}
+
+async function fetchAndRenderMeta(adAccounts) {
+  const token = apiConfig.meta.token;
+  const since = (() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0]; })();
+  const until = new Date().toISOString().split('T')[0];
+  const statusMap = { 1:'Aktif', 2:'Paused', 3:'Ended', 7:'Ended' };
+
+  const metaRows = [];
+  for (const acc of adAccounts) {
+    try {
+      const r = await fetch(`https://graph.facebook.com/v19.0/${acc.id}/insights?access_token=${token}&fields=spend,clicks,impressions,purchase_roas&time_range={"since":"${since}","until":"${until}"}&level=account`);
+      const d = await r.json();
+      const row = d.data?.[0];
+      const spend = parseFloat(row?.spend || 0);
+      const imp = parseInt(row?.impressions || 0);
+      const clicks = parseInt(row?.clicks || 0);
+      const roas = parseFloat(row?.purchase_roas?.[0]?.value || 0);
+      metaRows.push({
+        id: acc.id,
+        name: acc.name,
+        platform: 'meta',
+        status: statusMap[acc.account_status] || 'Aktif',
+        spend,
+        ctr: imp > 0 ? +((clicks/imp)*100).toFixed(2) : 0,
+        roas: +roas.toFixed(2),
+        imp,
+        budget: 0,
+      });
+    } catch(e) {
+      metaRows.push({ id:acc.id, name:acc.name, platform:'meta', status: statusMap[acc.account_status]||'Aktif', spend:0, ctr:0, roas:0, imp:0, budget:0 });
+    }
+  }
+
+  // Replace dummy meta data dengan data real
+  const nonMeta = ALL_DATA.filter(a => a.platform !== 'meta');
+  ALL_DATA.length = 0;
+  nonMeta.forEach(a => ALL_DATA.push(a));
+  metaRows.forEach(a => ALL_DATA.push(a));
+  updateCounts();
+  renderAll();
+  document.getElementById('last-update').textContent = 'Meta: data real · Update: ' + new Date().toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'});
 }
 
 // Modal
@@ -802,13 +849,21 @@ function renderAll() {
   renderSpendChart(base);
   renderCtrChart(base);
   renderTable(getFiltered());
-  document.getElementById('last-update').textContent = 'Update: '+new Date().toLocaleString('id-ID',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})+(Object.keys(apiConfig).length?' · API configured':'  · Data dummy');
+  document.getElementById('last-update').textContent = 'Update: '+new Date().toLocaleString('id-ID',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})+(isConnected('meta')?' · Meta: real data':'  · Data dummy');
 }
 
 loadConfigToInputs();
 updateConnectionStatus();
 updateCounts();
 renderAll();
+
+// Auto fetch Meta jika token sudah tersimpan
+if (isConnected('meta')) {
+  fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${apiConfig.meta.token}&fields=id,name,account_status&limit=25`)
+    .then(r=>r.json())
+    .then(d=>{ if(d.data) fetchAndRenderMeta(d.data); })
+    .catch(()=>{});
+}
 </script>
 </body>
 </html>
