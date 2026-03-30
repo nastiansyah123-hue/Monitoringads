@@ -934,7 +934,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Advertiser Management -->
-    <div id="view-advertiser" style="display:none;flex-direction:column;flex:1;min-height:0;overflow-y:auto;">
+    <div id="view-advertiser" style="display:none;flex-direction:column;overflow-y:auto;">
       <div class="page-header">
         <div class="page-title">
           <h1>Advertiser</h1>
@@ -1010,7 +1010,7 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 
 <script>
 function setMobileNav(active) {
-  ['dashboard','akun','config','platform'].forEach(v => {
+  ['dashboard','akun','advertiser','config'].forEach(v => {
     const el = document.getElementById('mob-'+v);
     if (el) el.classList.toggle('active', v===active);
   });
@@ -2471,16 +2471,11 @@ function showView(view) {
     document.getElementById('view-kampanye').style.display = 'flex';
     document.getElementById('nav-akun').classList.add('active');
   } else if (view === 'advertiser') {
-    const advView = document.getElementById('view-advertiser');
-    advView.style.display = 'flex';
-    advView.style.flexDirection = 'column';
-    advView.style.flex = '1';
+    document.getElementById('view-advertiser').style.display = 'flex';
     document.getElementById('nav-advertiser').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
-    // Pastikan advertiser-list ada sebelum load
-    const advList = document.getElementById('advertiser-list');
-    if (advList) advList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat...</div>';
-    setTimeout(() => { loadAdvertiserList(); populateAccountDropdown(); }, 50);
+    loadAdvertiserList();
+    populateAccountDropdown();
   }
   window.scrollTo(0, 0);
 }
@@ -2721,9 +2716,31 @@ const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return fm
 
 let dateRange = { since: daysAgo(30), until: today(), label: '30 Hari Terakhir' };
 
-// Restore date range dari localStorage
+// Restore date range dari localStorage — recalculate preset agar tanggal selalu fresh
 const savedDate = localStorage.getItem('admonitor_date');
-if (savedDate) { try { dateRange = JSON.parse(savedDate); } catch(e){} }
+if (savedDate) {
+  try {
+    const parsed = JSON.parse(savedDate);
+    // Kalau preset (bukan custom range), hitung ulang tanggalnya
+    const d = new Date();
+    const presets = {
+      'Hari Ini': { since: today(), until: today() },
+      'Kemarin': { since: daysAgo(1), until: daysAgo(1) },
+      '7 Hari Terakhir': { since: daysAgo(7), until: today() },
+      '30 Hari Terakhir': { since: daysAgo(30), until: today() },
+      '90 Hari Terakhir': { since: daysAgo(90), until: today() },
+      'Bulan Ini': { since: fmtDate(new Date(d.getFullYear(),d.getMonth(),1)), until: today() },
+      'Maksimal (1 Tahun)': { since: daysAgo(365), until: today() },
+    };
+    if (presets[parsed.label]) {
+      // Preset — update tanggal ke hari ini
+      dateRange = { ...presets[parsed.label], label: parsed.label };
+    } else {
+      // Custom range — pakai apa adanya
+      dateRange = parsed;
+    }
+  } catch(e) {}
+}
 
 function saveDateRange() { localStorage.setItem('admonitor_date', JSON.stringify(dateRange)); }
 
@@ -3038,13 +3055,13 @@ function applyPlatformSelection() {
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
       Akun
     </button>
+    <button class="mobile-nav-btn" id="mob-advertiser" onclick="showView('advertiser');setMobileNav('advertiser')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      Advertiser
+    </button>
     <button class="mobile-nav-btn" id="mob-config" onclick="toggleApiPanel();setMobileNav('config')">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       API
-    </button>
-    <button class="mobile-nav-btn" id="mob-platform" onclick="backToWelcome()">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
-      Platform
     </button>
   </div>
 </div>
