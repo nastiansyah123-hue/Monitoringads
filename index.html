@@ -1199,9 +1199,25 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
         <div>
           <h1 style="font-size:17px;font-weight:600">👑 Super Admin View</h1>
-          <p style="font-size:11px;color:var(--text2);margin-top:2px">Monitoring semua admin secara bersamaan</p>
+          <p id="sa-last-update" style="font-size:11px;color:var(--text2);margin-top:2px">Monitoring semua admin secara bersamaan</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <!-- Filter tanggal -->
+          <div style="display:flex;gap:4px">
+            <button class="pill active" id="sa-d-today" onclick="setSADate('today',this)" style="font-size:11px;padding:4px 10px">Hari Ini</button>
+            <button class="pill" id="sa-d-yesterday" onclick="setSADate('yesterday',this)" style="font-size:11px;padding:4px 10px">Kemarin</button>
+            <button class="pill" id="sa-d-7" onclick="setSADate('7',this)" style="font-size:11px;padding:4px 10px">7 Hari</button>
+            <button class="pill" id="sa-d-30" onclick="setSADate('30',this)" style="font-size:11px;padding:4px 10px">30 Hari</button>
+            <button class="pill" id="sa-d-custom" onclick="setSADate('custom',this)" style="font-size:11px;padding:4px 10px">Custom</button>
+          </div>
+          <!-- Custom date range -->
+          <div id="sa-custom-date" style="display:none;gap:4px;align-items:center">
+            <input type="date" id="sa-date-from" style="padding:5px 8px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:11px;font-family:var(--sans)">
+            <span style="font-size:11px;color:var(--text3)">→</span>
+            <input type="date" id="sa-date-to" style="padding:5px 8px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:11px;font-family:var(--sans)">
+            <button onclick="applySACustomDate()" style="padding:5px 10px;border-radius:7px;border:none;background:#4f8ef7;color:white;font-size:11px;cursor:pointer;font-family:var(--sans)">Terapkan</button>
+          </div>
+          <!-- Filter admin -->
           <select id="sa-filter-admin" onchange="saFilterAdmin()" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--sans)">
             <option value="all">Semua Admin</option>
           </select>
@@ -1894,11 +1910,19 @@ async function saLoadAllAdmins() {
   if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat data semua admin...</div>';
   if (summaryEl) summaryEl.innerHTML = '';
 
+  // Set default date kalau belum ada
+  if (!saDateSince) { saDateSince = today(); saDateUntil = today(); }
+
   try {
     const resp = await fetch('/api/superadmin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: currentUser.id })
+      body: JSON.stringify({ 
+        user_id: currentUser.id,
+        since: saDateSince,
+        until: saDateUntil,
+        preset: saDatePreset
+      })
     });
     const data = await resp.json();
 
@@ -1927,6 +1951,17 @@ async function saLoadAllAdmins() {
     }
 
     renderSuperAdminView(saAdminsData);
+
+    // Update last update info
+    const lastUpdate = document.getElementById('sa-last-update');
+    if (lastUpdate) {
+      const label = saDatePreset === 'today' ? 'Hari Ini' :
+                    saDatePreset === 'yesterday' ? 'Kemarin' :
+                    saDatePreset === '7' ? '7 Hari Terakhir' :
+                    saDatePreset === '30' ? '30 Hari Terakhir' :
+                    `${saDateSince} s/d ${saDateUntil}`;
+      lastUpdate.textContent = `📅 ${label} · Update: ${new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}`;
+    }
 
   } catch(e) {
     if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:#f75c5c">Error: ${e.message}</div>`;
@@ -2009,6 +2044,42 @@ function renderSuperAdminView(admins) {
       </div>
     </div>
   `).join('');
+}
+
+// Filter tanggal super admin
+let saDatePreset = 'today';
+let saDateSince = '';
+let saDateUntil = '';
+
+function setSADate(preset, el) {
+  saDatePreset = preset;
+  document.querySelectorAll('[id^="sa-d-"]').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const customWrap = document.getElementById('sa-custom-date');
+  if (preset === 'custom') {
+    if (customWrap) customWrap.style.display = 'flex';
+    return;
+  }
+  if (customWrap) customWrap.style.display = 'none';
+
+  const t = today();
+  switch(preset) {
+    case 'today':     saDateSince = t; saDateUntil = t; break;
+    case 'yesterday': saDateSince = daysAgo(1); saDateUntil = daysAgo(1); break;
+    case '7':         saDateSince = daysAgo(7); saDateUntil = t; break;
+    case '30':        saDateSince = daysAgo(30); saDateUntil = t; break;
+  }
+  saLoadAllAdmins();
+}
+
+function applySACustomDate() {
+  const from = document.getElementById('sa-date-from').value;
+  const to = document.getElementById('sa-date-to').value;
+  if (!from || !to) return;
+  saDateSince = from;
+  saDateUntil = to;
+  saLoadAllAdmins();
 }
 
 function saFilterAdmin() {
