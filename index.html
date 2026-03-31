@@ -2113,52 +2113,67 @@ async function saOpenAdminDashboard(idx) {
     </div>
   `;
 
-  // Load data akun admin ini ke ALL_DATA sementara
+  // Simpan ALL_DATA lama
   const savedAllData = [...ALL_DATA];
+  const savedLimits = JSON.parse(JSON.stringify(manualLimits));
   ALL_DATA.length = 0;
 
   // Masukkan akun admin ini ke ALL_DATA
   admin.accounts.forEach(acc => {
     ALL_DATA.push({
-      id: acc.id,
-      name: acc.name,
-      platform: 'meta',
-      status: 'Aktif',
-      spend: acc.spend,
-      leads: acc.hasil,
-      cpr: acc.cpr,
-      imp: acc.impresi,
-      clicks: acc.klik,
-      ctr: 0,
-      roas: 0,
-      budget: 0
+      id: acc.id, name: acc.name, platform: 'meta', status: 'Aktif',
+      spend: acc.spend, leads: acc.hasil, cpr: acc.cpr,
+      imp: acc.impresi, clicks: acc.klik, ctr: 0, roas: 0, budget: 0
     });
   });
+
+  // Load manual limits milik admin ini dari data yang sudah di-fetch
+  try {
+    const limData = admin.limits || [];
+    Object.keys(manualLimits).forEach(k => delete manualLimits[k]);
+    if (limData.length) {
+      limData.forEach(r => {
+        manualLimits[r.account_id] = {
+          limit: r.limit_amount || 0,
+          saldoAwal: r.saldo_awal || 0,
+          spendSaatSet: r.spend_saat_set || 0,
+          riwayatBayar: []
+        };
+      });
+    }
+  } catch(e) { console.warn('loadLimits SA error:', e); }
 
   // Render dashboard view
   showView('dashboard');
   updateCounts();
   renderAll();
 
-  // Tambah badge "Viewing: Admin X" di header
+  // Badge "Viewing: Admin X" di header
   const lastUpdate = document.getElementById('last-update');
   if (lastUpdate) lastUpdate.innerHTML = `
     👁 Melihat dashboard <strong>${admin.label}</strong> &nbsp;
-    <button onclick="saBackToSuperAdmin(${JSON.stringify(savedAllData).replace(/"/g,"'")})" 
+    <button onclick="saBackToSuperAdmin()" 
       style="font-size:11px;padding:2px 8px;border-radius:5px;border:none;background:#f5a623;color:white;cursor:pointer;font-family:var(--sans)">
       ← Kembali ke Super Admin
     </button>
   `;
+
+  // Simpan data lama untuk restore nanti
+  window._saBackupAllData = savedAllData;
+  window._saBackupLimits = savedLimits;
 }
 
 function saBackToOverview() {
   renderSuperAdminView(saAdminsData);
 }
 
-function saBackToSuperAdmin(savedData) {
+function saBackToSuperAdmin() {
   // Restore ALL_DATA
   ALL_DATA.length = 0;
-  if (Array.isArray(savedData)) savedData.forEach(a => ALL_DATA.push(a));
+  if (window._saBackupAllData?.length) window._saBackupAllData.forEach(a => ALL_DATA.push(a));
+  // Restore manualLimits
+  Object.keys(manualLimits).forEach(k => delete manualLimits[k]);
+  if (window._saBackupLimits) Object.assign(manualLimits, window._saBackupLimits);
   showView('superadmin');
   renderSuperAdminView(saAdminsData);
 }
