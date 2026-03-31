@@ -7,18 +7,10 @@ on:
     - cron: '0 8 * * *'    # 15.00 WIB - Laporan rutin
     - cron: '30 11 * * *'  # 18.30 WIB - Laporan rutin
     - cron: '30 14 * * *'  # 21.30 WIB - Laporan rutin
-    - cron: '0 * * * *'    # Setiap jam - Cek budget alert
   workflow_dispatch:
 
 jobs:
   send-laporan:
-    if: |
-      github.event.schedule == '0 0 * * *' ||
-      github.event.schedule == '0 4 * * *' ||
-      github.event.schedule == '0 8 * * *' ||
-      github.event.schedule == '30 11 * * *' ||
-      github.event.schedule == '30 14 * * *' ||
-      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Kirim laporan rutin
@@ -28,12 +20,10 @@ jobs:
             -H "Content-Type: application/json")
           echo "Laporan: $RESPONSE"
 
-  check-budget:
-    runs-on: ubuntu-latest
-    steps:
       - name: Cek budget alert
         run: |
           RESPONSE=$(curl -s -X POST https://monitoringads.vercel.app/api/check-budget \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json")
+            -H "Content-Type: application/json" \
+            -d '{}')
           echo "Budget alert: $RESPONSE"
