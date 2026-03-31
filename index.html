@@ -944,12 +944,13 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
               <thead>
                 <tr>
                   <th style="width:35%">Nama Kampanye</th>
-                  <th style="width:15%">Spend</th>
-                  <th style="width:10%">Hasil</th>
-                  <th style="width:12%">CPR</th>
-                  <th style="width:12%">Impresi</th>
-                  <th style="width:10%">Status</th>
+                  <th style="width:12%">Spend</th>
+                  <th style="width:8%">Hasil</th>
+                  <th style="width:10%">CPR</th>
+                  <th style="width:10%">Impresi</th>
+                  <th style="width:8%">Status</th>
                   <th style="width:6%">Klik</th>
+                  <th style="width:11%">Aksi</th>
                 </tr>
               </thead>
               <tbody id="kampanye-body"></tbody>
@@ -3029,7 +3030,6 @@ async function loadManualLimits() {
       .eq('user_id', currentUser.id);
     if (error) { console.warn('loadManualLimits error:', error.message); return; }
     if (data?.length) {
-      let changed = false;
       data.forEach(r => {
         const existing = manualLimits[r.account_id];
         manualLimits[r.account_id] = {
@@ -3038,14 +3038,15 @@ async function loadManualLimits() {
           spendSaatSet: r.spend_saat_set || 0,
           riwayatBayar: existing?.riwayatBayar || []
         };
-        changed = true;
       });
-      if (changed) {
-        localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
-        // Re-render tabel dan kartu agar budget/sisa muncul
-        renderTable(getFiltered());
+      localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
+
+      // Re-render semua tampilan yang pakai manualLimits
+      if (ALL_DATA.length) {
+        renderTable(getFiltered());        // Dashboard tabel advertiser
+        renderBudgetAlerts(ALL_DATA);     // Budget alert bar
         if (document.getElementById('view-akun')?.style.display !== 'none') {
-          renderAkun(ALL_DATA);
+          renderAkun(ALL_DATA);           // View akun
         }
       }
     }
@@ -3620,6 +3621,70 @@ async function fetchKampanyeMeta(adv) {
   }
 }
 
+async function toggleKampanye(campaignId, currentStatus, btnEl) {
+  const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+  const label = newStatus === 'PAUSED' ? '⏸ Pause' : '▶ Aktifkan';
+
+  // Konfirmasi
+  const konfirm = confirm(`${newStatus === 'PAUSED' ? 'Pause' : 'Aktifkan'} kampanye ini?`);
+  if (!konfirm) return;
+
+  // Disable tombol sementara
+  btnEl.disabled = true;
+  btnEl.textContent = 'Memproses...';
+
+  const token = metaTokens[0]?.token || apiConfig.meta?.token;
+  if (!token) { alert('Token Meta tidak ditemukan'); btnEl.disabled = false; return; }
+
+  try {
+    const resp = await fetch(`https://graph.facebook.com/v19.0/${campaignId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: newStatus,
+        access_token: token
+      })
+    });
+    const result = await resp.json();
+
+    if (result.success || result.id) {
+      // Update UI langsung tanpa reload
+      btnEl.textContent = newStatus === 'PAUSED' ? '⏸ Pause' : '▶ Aktifkan';
+      btnEl.style.background = newStatus === 'PAUSED' ? 'rgba(245,166,35,0.15)' : 'rgba(34,211,160,0.15)';
+      btnEl.style.color = newStatus === 'PAUSED' ? '#f5a623' : '#22d3a0';
+      btnEl.setAttribute('onclick', `toggleKampanye('${campaignId}','${newStatus}',this)`);
+
+      // Update badge status di row/card yang sama
+      const row = btnEl.closest('tr') || btnEl.closest('div[style*="border-radius:10px"]');
+      if (row) {
+        const badge = row.querySelector('.badge');
+        if (badge) {
+          badge.className = `badge ${newStatus === 'ACTIVE' ? 'badge-active' : 'badge-paused'}`;
+          badge.textContent = newStatus === 'ACTIVE' ? 'Aktif' : 'Paused';
+        }
+        const toggleBtn = row.querySelector('button[onclick*="toggleKampanye"]');
+        if (toggleBtn) {
+          toggleBtn.textContent = newStatus === 'ACTIVE' ? '⏸ Pause Kampanye' : '▶ Aktifkan Kampanye';
+          toggleBtn.style.background = newStatus === 'ACTIVE' ? 'rgba(245,166,35,0.15)' : 'rgba(34,211,160,0.15)';
+          toggleBtn.style.color = newStatus === 'ACTIVE' ? '#f5a623' : '#22d3a0';
+        }
+      }
+
+      // Update di _allCampaigns
+      const camp = _allCampaigns.find(c => c.id === campaignId);
+      if (camp) camp.status = newStatus;
+
+      btnEl.disabled = false;
+    } else {
+      throw new Error(result.error?.message || JSON.stringify(result));
+    }
+  } catch(e) {
+    alert('Gagal: ' + e.message);
+    btnEl.disabled = false;
+    btnEl.textContent = currentStatus === 'ACTIVE' ? '⏸ Pause' : '▶ Aktifkan';
+  }
+}
+
 function renderKampanye(campaigns, adv) {
   // Simpan semua kampanye untuk filter (hanya saat adv ada)
   if (adv !== null) { _allCampaigns = campaigns; _kampFilter = 'all'; _kampSort = 'spend_desc'; }
@@ -3649,8 +3714,17 @@ function renderKampanye(campaigns, adv) {
       <td class="num">${fmtImp(c.imp)}</td>
       <td><span class="badge ${statusColor(c.status)}">${statusLabel(c.status)}</span></td>
       <td class="num">${fmtImp(c.clicks)}</td>
+      <td style="text-align:center">
+        ${c.status === 'ACTIVE' || c.status === 'PAUSED' ? `
+        <button onclick="toggleKampanye('${c.id}','${c.status}',this)" 
+          style="font-size:10px;padding:3px 10px;border-radius:5px;border:none;cursor:pointer;font-family:var(--sans);font-weight:500;
+          background:${c.status==='ACTIVE'?'rgba(245,166,35,0.15)':'rgba(34,211,160,0.15)'};
+          color:${c.status==='ACTIVE'?'#f5a623':'#22d3a0'}">
+          ${c.status==='ACTIVE'?'⏸ Pause':'▶ Aktifkan'}
+        </button>` : '<span style="font-size:10px;color:var(--text3)">–</span>'}
+      </td>
     </tr>
-  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2)">Tidak ada kampanye ditemukan</td></tr>';
+  `).join('') || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text2)">Tidak ada kampanye ditemukan</td></tr>';
 
   // Mobile cards
   const mobileEl = document.getElementById('kampanye-mobile-list');
@@ -3686,6 +3760,13 @@ function renderKampanye(campaigns, adv) {
             <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${fmtImp(c.clicks)}</div>
           </div>
         </div>
+        ${c.status === 'ACTIVE' || c.status === 'PAUSED' ? `
+        <button onclick="toggleKampanye('${c.id}','${c.status}',this)"
+          style="margin-top:10px;width:100%;padding:9px;border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:500;
+          background:${c.status==='ACTIVE'?'rgba(245,166,35,0.15)':'rgba(34,211,160,0.15)'};
+          color:${c.status==='ACTIVE'?'#f5a623':'#22d3a0'}">
+          ${c.status==='ACTIVE'?'⏸ Pause Kampanye':'▶ Aktifkan Kampanye'}
+        </button>` : ''}
       </div>
     `).join('') : '<div style="padding:32px;text-align:center;color:var(--text2)">Tidak ada kampanye</div>';
   }
