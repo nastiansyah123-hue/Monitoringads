@@ -15,32 +15,26 @@ module.exports = async function handler(req, res) {
     const jamStr = `${String(nowWIB.getUTCHours()).padStart(2,'0')}.${String(nowWIB.getUTCMinutes()).padStart(2,'0')} WIB`;
     const today = nowWIB.toISOString().split('T')[0];
 
-    // Ambil semua account_limits (tanpa filter user_id)
-    const { data: allLimits, error: limErr } = await sb
-      .from('account_limits')
-      .select('user_id, account_id, limit_amount, saldo_awal, spend_saat_set');
+    // Ambil semua data sekaligus
+    const [limitsRes, configsRes, advertisersRes, logsRes] = await Promise.all([
+      sb.from('account_limits').select('user_id, account_id, limit_amount, saldo_awal, spend_saat_set'),
+      sb.from('user_config').select('user_id, meta_token, meta_tokens, fonnte_token, spv_name, spv_phone'),
+      sb.from('advertisers').select('user_id, accounts, spv_name, spv_phone, pic_name, pic_phone'),
+      sb.from('budget_alert_logs').select('account_id, alert_type').eq('tanggal', today)
+    ]);
 
-    if (limErr) return res.json({ error: 'limits error: ' + limErr.message });
-    if (!allLimits?.length) return res.json({ alerts: 0, reason: 'no limits set' });
+    const allLimits = limitsRes.data || [];
+    const allConfigs = configsRes.data || [];
+    const allAdvertisers = advertisersRes.data || [];
+    const sentToday = new Set((logsRes.data || []).map(l => `${l.account_id}_${l.alert_type}`));
 
-    // Ambil user_config untuk setiap user yang punya limits
-    const userIds = [...new Set(allLimits.map(l => l.user_id))];
-    const { data: userConfigs } = await sb
-      .from('user_config')
-      .select('user_id, meta_token, meta_tokens, fonnte_token, spv_name, spv_phone')
-      .in('user_id', userIds);
-
-    if (!userConfigs?.length) return res.json({ alerts: 0, reason: 'no user configs' });
-
-    // Anti spam log
-    const { data: todayLogs } = await sb.from('budget_alert_logs')
-      .select('account_id, alert_type').eq('tanggal', today);
-    const sentToday = new Set((todayLogs || []).map(l => `${l.account_id}_${l.alert_type}`));
+    if (!allLimits.length) return res.json({ alerts: 0, reason: 'no limits set' });
+    if (!allConfigs.length) return res.json({ alerts: 0, reason: 'no user configs' });
 
     const allAlerts = [];
-    const debug = [];
 
-    for (const uc of userConfigs) {
+    // Proses per user config
+    for (const uc of allConfigs) {
       // Kumpulkan token
       let tokens = [];
       if (uc.meta_tokens) {
@@ -51,42 +45,49 @@ module.exports = async function handler(req, res) {
 
       // Limits user ini
       const userLimits = allLimits.filter(l => l.user_id === uc.user_id);
-      debug.push({ userId: uc.user_id, limitsCount: userLimits.length, tokensCount: tokens.length });
+      if (!userLimits.length) continue;
+
+      // Advertisers user ini (untuk cari SPV per akun)
+      const userAdvs = allAdvertisers.filter(a => a.user_id === uc.user_id);
 
       for (const token of tokens) {
         try {
-          // Fetch semua akun + spend hari ini sekaligus
-          const url = `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}` +
-            `&fields=id,name,insights.date_preset(today){spend}&limit=50`;
-          const accRes = await fetch(url);
+          const accRes = await fetch(
+            `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}` +
+            `&fields=id,name,insights.date_preset(today){spend}&limit=50`
+          );
           const accData = await accRes.json();
-          if (accData.error) { debug.push({ metaError: accData.error.message }); continue; }
+          if (accData.error) continue;
 
           for (const acc of (accData.data || [])) {
             const lim = userLimits.find(l => l.account_id === acc.id);
             if (!lim || !lim.limit_amount || lim.limit_amount <= 0) continue;
 
-            // Hitung saldo tertunggak
+            // Hitung saldo
             const spendAPI = parseFloat(acc.insights?.data?.[0]?.spend || 0);
             const spendSejak = Math.max(0, spendAPI - (lim.spend_saat_set || 0));
             const saldoTertunggak = (lim.saldo_awal || 0) + spendSejak;
             const pct = Math.min(100, Math.round(saldoTertunggak / lim.limit_amount * 100));
             const sisa = Math.max(0, lim.limit_amount - saldoTertunggak);
 
-            debug.push({ account: acc.name, pct, saldoTertunggak, limit: lim.limit_amount });
-
             if (pct < THRESHOLD) continue;
 
             const alertType = pct >= 90 ? 'kritis_90' : 'hampir_70';
             if (!test_threshold && sentToday.has(`${acc.id}_${alertType}`)) continue;
 
-            const finalPhone = test_phone || uc.spv_phone;
-            if (!finalPhone) { debug.push({ skip: 'no phone', account: acc.name }); continue; }
+            // Cari SPV dari advertisers yang punya akun ini
+            const adv = userAdvs.find(a => {
+              try { return JSON.parse(a.accounts || '[]').includes(acc.id); } catch(e) { return false; }
+            });
 
-            const fonnteToken = uc.fonnte_token || process.env.FONNTE_TOKEN;
+            // Prioritas: SPV advertiser → test_phone
+            const spvPhone = test_phone || uc.spv_phone;
             const spvName = uc.spv_name || 'SPV';
-            const emoji = pct >= 90 ? '🚨' : '⚠️';
+            const fonnteToken = uc.fonnte_token || process.env.FONNTE_TOKEN;
 
+            if (!spvPhone) continue;
+
+            const emoji = pct >= 90 ? '🚨' : '⚠️';
             let pesan = `${emoji} *ALERT BUDGET ${pct >= 90 ? 'KRITIS' : 'PERINGATAN'}*\n\n`;
             pesan += `👔 Halo, *${spvName}*!\n`;
             pesan += `🏢 *${acc.name}*\n`;
@@ -100,7 +101,7 @@ module.exports = async function handler(req, res) {
               : `⚠️ Budget ${pct}% terpakai. Pantau pengeluaran iklan.`;
             pesan += `\n\n_AdMonitor · Herbal Jaya_`;
 
-            const waResult = await kirimWA(finalPhone, pesan, fonnteToken);
+            const waResult = await kirimWA(spvPhone, pesan, fonnteToken);
 
             await sb.from('budget_alert_logs').insert({
               user_id: uc.user_id, account_id: acc.id, account_name: acc.name,
@@ -109,13 +110,13 @@ module.exports = async function handler(req, res) {
             }).catch(() => {});
 
             sentToday.add(`${acc.id}_${alertType}`);
-            allAlerts.push({ account: acc.name, pct, alertType, phone: finalPhone, status: waResult });
+            allAlerts.push({ account: acc.name, pct, alertType, spv: spvName, status: waResult });
           }
-        } catch(e) { debug.push({ tokenError: e.message }); }
+        } catch(e) { continue; }
       }
     }
 
-    return res.json({ success: true, alerts: allAlerts.length, detail: allAlerts, debug });
+    return res.json({ success: true, alerts: allAlerts.length, detail: allAlerts });
 
   } catch(e) {
     return res.status(500).json({ error: e.message });
