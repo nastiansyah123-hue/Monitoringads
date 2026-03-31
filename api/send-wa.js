@@ -13,9 +13,9 @@ module.exports = async function handler(req, res) {
   try {
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+    // Waktu WIB
     const now = new Date();
-    const wibOffset = 7 * 60 * 60 * 1000;
-    const nowWIB = new Date(now.getTime() + wibOffset);
+    const nowWIB = new Date(now.getTime() + 7 * 3600 * 1000);
     const jamWIB = nowWIB.getUTCHours();
     const menitWIB = String(nowWIB.getUTCMinutes()).padStart(2,'0');
     const jamStr = `${String(jamWIB).padStart(2,'0')}.${menitWIB} WIB`;
@@ -25,23 +25,23 @@ module.exports = async function handler(req, res) {
     const today = `${y}-${m}-${d}`;
     const tanggalStr = formatTanggal(nowWIB);
 
-    // 1. Ambil semua user beserta token Meta mereka dari user_config
+    // 1. Ambil semua user config (token Meta + info SPV)
     const { data: userConfigs, error: ucErr } = await sb
       .from('user_config')
-      .select('user_id, meta_token');
+      .select('user_id, meta_token, spv_name, spv_phone');
 
     if (ucErr) throw new Error('user_config error: ' + ucErr.message);
     if (!userConfigs?.length) return res.json({ sent: 0, message: 'No user configs' });
 
     const allResults = [];
 
-    // 2. Proses per user (per admin)
+    // 2. Proses per admin
     for (const uc of userConfigs) {
-      if (!uc.meta_token) continue; // skip user yang belum set token Meta
+      if (!uc.meta_token) continue;
 
       const META_TOKEN = uc.meta_token;
 
-      // Ambil advertisers milik user ini
+      // Ambil advertisers milik admin ini
       const { data: advertisers } = await sb
         .from('advertisers')
         .select('*')
@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
 
       if (!advertisers?.length) continue;
 
-      // Ambil nama akun dari Meta API user ini
+      // Ambil nama akun dari Meta API
       const metaAccRes = await fetch(
         `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${META_TOKEN}&fields=id,name&limit=50`
       );
@@ -58,11 +58,13 @@ module.exports = async function handler(req, res) {
         console.error('Meta token invalid for user', uc.user_id);
         continue;
       }
-
       const accNameMap = {};
       (metaAccData.data || []).forEach(a => accNameMap[a.id] = a.name);
 
-      // Proses setiap advertiser
+      // Kumpulkan data semua akun admin ini untuk SPV
+      const semuaAkunSPV = [];
+
+      // 3. Proses per advertiser → kirim WA ke advertiser
       for (const adv of advertisers) {
         if (!adv.pic_phone) continue;
         const accounts = JSON.parse(adv.accounts || '[]');
@@ -73,8 +75,6 @@ module.exports = async function handler(req, res) {
         for (const accId of accounts) {
           try {
             const namaAkun = accNameMap[accId] || accId;
-
-            // Fetch kampanye aktif hari ini
             const url = `https://graph.facebook.com/v19.0/${accId}/campaigns` +
               `?access_token=${META_TOKEN}` +
               `&fields=id,name,status,insights.date_preset(today){spend,actions,impressions,clicks}` +
@@ -86,6 +86,7 @@ module.exports = async function handler(req, res) {
             if (campData.error || !campData.data?.length) continue;
 
             const scale = [], kill = [], pantau = [];
+            let totalSpendAkun = 0, totalHasilAkun = 0;
 
             for (const camp of campData.data) {
               const ins = camp.insights?.data?.[0];
@@ -102,6 +103,9 @@ module.exports = async function handler(req, res) {
               const klik = parseInt(ins.clicks || 0);
               const info = { name: camp.name, spend, hasil, cpr, impresi, klik };
 
+              totalSpendAkun += spend;
+              totalHasilAkun += hasil;
+
               if (hasil > 0 && cpr < 150000) scale.push(info);
               else if (spend > 50000 && hasil === 0) kill.push(info);
               else pantau.push(info);
@@ -109,15 +113,22 @@ module.exports = async function handler(req, res) {
 
             if (scale.length || kill.length || pantau.length) {
               akunReports.push({ namaAkun, scale, kill, pantau });
+              // Simpan untuk rekap SPV
+              semuaAkunSPV.push({
+                namaAkun, namaAdv: adv.name,
+                spend: totalSpendAkun, hasil: totalHasilAkun,
+                cpr: totalHasilAkun > 0 ? Math.round(totalSpendAkun/totalHasilAkun) : 0,
+                scale, kill, pantau
+              });
             }
           } catch(e) {
-            console.error('Error fetch account', accId, e.message);
+            console.error('Error', accId, e.message);
           }
         }
 
         if (!akunReports.length) continue;
 
-        // Susun pesan WA
+        // Kirim WA ke advertiser
         let pesan = `📊 *Laporan Iklan Hari Ini*\n`;
         pesan += `🕐 ${jamStr} | ${tanggalStr}\n`;
         pesan += `👤 Halo, *${adv.pic_name || adv.name}*!\n`;
@@ -127,42 +138,83 @@ module.exports = async function handler(req, res) {
           pesan += `\n━━━━━━━━━━━━━━━━\n`;
           pesan += `🏢 *${akun.namaAkun}*\n`;
           pesan += `━━━━━━━━━━━━━━━━\n`;
-
-          if (akun.scale.length > 0) {
+          if (akun.scale.length) {
             pesan += `\n✅ *BAGUS - Bisa Scale:*\n`;
             akun.scale.forEach(c => {
               pesan += `▸ *${c.name}*\n`;
-              pesan += `   💰 Spend: ${fmtRp(c.spend)}\n`;
-              pesan += `   🎯 Hasil: ${c.hasil} | CPR: ${fmtRp(c.cpr)}\n`;
+              pesan += `   💰 Spend: ${fmtRp(c.spend)} | 🎯 Hasil: ${c.hasil} | CPR: ${fmtRp(c.cpr)}\n`;
               pesan += `   👁 Impresi: ${fmtNum(c.impresi)} | Klik: ${fmtNum(c.klik)}\n`;
             });
           }
-
-          if (akun.kill.length > 0) {
+          if (akun.kill.length) {
             pesan += `\n❌ *KILL - Tidak Ada Hasil:*\n`;
             akun.kill.forEach(c => {
               pesan += `▸ *${c.name}*\n`;
               pesan += `   💰 Spend: ${fmtRp(c.spend)} | Hasil: 0\n`;
             });
           }
-
-          if (akun.pantau.length > 0) {
+          if (akun.pantau.length) {
             pesan += `\n⚠️ *Perlu Dipantau:*\n`;
             akun.pantau.forEach(c => {
-              pesan += `▸ ${c.name}\n`;
-              pesan += `   Spend: ${fmtRp(c.spend)} | Hasil: ${c.hasil}\n`;
+              pesan += `▸ ${c.name} — Spend: ${fmtRp(c.spend)} | Hasil: ${c.hasil}\n`;
             });
           }
         }
-
         pesan += `\n_AdMonitor · Herbal Jaya_`;
 
-        const waResult = await kirimWA(adv.pic_phone, pesan);
-        allResults.push({ user: uc.user_id, advertiser: adv.name, phone: adv.pic_phone, status: waResult });
+        const r1 = await kirimWA(adv.pic_phone, pesan);
+        allResults.push({ type: 'advertiser', advertiser: adv.name, phone: adv.pic_phone, status: r1 });
+      }
+
+      // 4. Kirim rekap ke SPV admin ini (kalau ada SPV)
+      if (uc.spv_phone && semuaAkunSPV.length) {
+        let totalSpend = 0, totalHasil = 0;
+        semuaAkunSPV.forEach(a => { totalSpend += a.spend; totalHasil += a.hasil; });
+
+        let pesanSPV = `📋 *Rekap Iklan - Semua Akun*\n`;
+        pesanSPV += `🕐 ${jamStr} | ${tanggalStr}\n`;
+        pesanSPV += `👔 Halo, *${uc.spv_name || 'SPV'}*!\n`;
+        pesanSPV += `_(Data hari ini s/d ${jamStr})_\n\n`;
+
+        pesanSPV += `📊 *RINGKASAN:*\n`;
+        pesanSPV += `Total Akun: ${semuaAkunSPV.length}\n`;
+        pesanSPV += `Total Spend: ${fmtRp(totalSpend)}\n`;
+        pesanSPV += `Total Hasil: ${totalHasil}\n`;
+        pesanSPV += `Avg CPR: ${totalHasil > 0 ? fmtRp(Math.round(totalSpend/totalHasil)) : '-'}\n`;
+
+        const akunBagus = semuaAkunSPV.filter(a => a.scale.length > 0);
+        const akunKill = semuaAkunSPV.filter(a => a.kill.length > 0 && a.scale.length === 0);
+        const akunPantau = semuaAkunSPV.filter(a => a.pantau.length > 0 && a.scale.length === 0 && a.kill.length === 0);
+
+        if (akunBagus.length) {
+          pesanSPV += `\n✅ *BAGUS (${akunBagus.length} akun):*\n`;
+          akunBagus.forEach(a => {
+            pesanSPV += `▸ *${a.namaAkun}*\n`;
+            pesanSPV += `   Spend: ${fmtRp(a.spend)} | Hasil: ${a.hasil} | CPR: ${fmtRp(a.cpr)}\n`;
+          });
+        }
+
+        if (akunKill.length) {
+          pesanSPV += `\n❌ *KILL (${akunKill.length} akun):*\n`;
+          akunKill.forEach(a => {
+            pesanSPV += `▸ *${a.namaAkun}* — Spend: ${fmtRp(a.spend)}\n`;
+          });
+        }
+
+        if (akunPantau.length) {
+          pesanSPV += `\n⚠️ *DIPANTAU (${akunPantau.length} akun):*\n`;
+          akunPantau.forEach(a => {
+            pesanSPV += `▸ ${a.namaAkun} — Spend: ${fmtRp(a.spend)}\n`;
+          });
+        }
+
+        pesanSPV += `\n_AdMonitor · Herbal Jaya_`;
+
+        const r2 = await kirimWA(uc.spv_phone, pesanSPV);
+        allResults.push({ type: 'spv', spv: uc.spv_name, phone: uc.spv_phone, status: r2 });
       }
     }
 
-    // Log
     try {
       await sb.from('wa_logs').insert({
         sent_at: new Date().toISOString(),
