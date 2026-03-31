@@ -552,10 +552,11 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <div class="toggle-track"><div class="toggle-thumb"></div></div>
       </button>
       <div class="avatar-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-        <div class="avatar">HJ</div>
-        <div class="avatar-info"><p>Herbal Jaya</p><span>Admin</span></div>
-        <button onclick="doLogout()" title="Keluar" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:6px;display:flex;align-items:center;" onmouseover="this.style.color='var(--red-text)'" onmouseout="this.style.color='var(--text3)'">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+        <div class="avatar" id="sidebar-avatar">HJ</div>
+        <div class="avatar-info"><p id="sidebar-name">Herbal Jaya</p><span id="sidebar-role">Admin</span></div>
+        <button onclick="doLogout()" title="Keluar" style="margin-left:auto;background:var(--red-bg);border:none;cursor:pointer;color:var(--red-text);padding:6px 10px;border-radius:7px;display:flex;align-items:center;gap:4px;font-size:11px;font-family:var(--sans);font-weight:500" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+          Keluar
         </button>
       </div>
     </div>
@@ -1528,13 +1529,16 @@ function togglePass() {
 }
 
 function initApp() {
-  const nameEl = document.querySelector('.avatar-info p');
-  const roleEl = document.querySelector('.avatar-info span');
-  const avatarEl = document.querySelector('.avatar');
   const email = currentUser?.email || '';
   const name = currentUser?.user_metadata?.name || email.split('@')[0];
+  const role = currentUser?.user_metadata?.role || 'viewer';
+
+  // Update sidebar user info
+  const nameEl = document.getElementById('sidebar-name') || document.querySelector('.avatar-info p');
+  const roleEl = document.getElementById('sidebar-role') || document.querySelector('.avatar-info span');
+  const avatarEl = document.getElementById('sidebar-avatar') || document.querySelector('.avatar');
   if (nameEl) nameEl.textContent = name;
-  if (roleEl) roleEl.textContent = currentUser?.user_metadata?.role || 'User';
+  if (roleEl) roleEl.textContent = role;
   if (avatarEl) avatarEl.textContent = name.slice(0,2).toUpperCase();
 
   // Isi welcomeSelected dari localStorage
