@@ -2007,19 +2007,24 @@ function renderSuperAdminView(admins) {
             <div style="font-size:11px;color:var(--text2)">${admin.jumlahAkun} akun iklan</div>
           </div>
         </div>
-        <div style="display:flex;gap:16px">
-          <div style="text-align:right">
-            <div style="font-size:10px;color:var(--text3)">Spend Hari Ini</div>
-            <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${fmtRp(admin.totalSpend)}</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;gap:16px">
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--text3)">Spend Hari Ini</div>
+              <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${fmtRp(admin.totalSpend)}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--text3)">Hasil</div>
+              <div style="font-size:13px;font-weight:600">${admin.totalHasil}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--text3)">CPR</div>
+              <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${admin.avgCPR > 0 ? fmtRp(admin.avgCPR) : '–'}</div>
+            </div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:10px;color:var(--text3)">Hasil</div>
-            <div style="font-size:13px;font-weight:600">${admin.totalHasil}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:10px;color:var(--text3)">CPR</div>
-            <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${admin.avgCPR > 0 ? fmtRp(admin.avgCPR) : '–'}</div>
-          </div>
+          <button onclick="saOpenAdminDashboard(${i})" style="padding:6px 14px;border-radius:7px;border:none;background:#4f8ef7;color:white;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans);white-space:nowrap">
+            📊 Buka Dashboard
+          </button>
         </div>
       </div>
       <!-- Tabel akun -->
@@ -2089,6 +2094,73 @@ function saFilterAdmin() {
   const val = document.getElementById('sa-filter-admin').value;
   if (val === 'all') renderSuperAdminView(saAdminsData);
   else renderSuperAdminView([saAdminsData[parseInt(val)]]);
+}
+
+async function saOpenAdminDashboard(idx) {
+  const admin = saAdminsData[idx];
+  if (!admin) return;
+
+  // Tampilkan loading
+  const listEl = document.getElementById('sa-admins-list');
+  if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text2)">Memuat dashboard ${admin.label}...</div>`;
+
+  // Tambah tombol kembali ke super admin
+  const summaryEl = document.getElementById('sa-summary');
+  if (summaryEl) summaryEl.innerHTML = `
+    <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:4px 0">
+      <button onclick="saBackToOverview()" style="padding:7px 16px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;font-family:var(--sans)">← Kembali ke Overview</button>
+      <span style="font-size:13px;font-weight:600">Dashboard ${admin.label}</span>
+    </div>
+  `;
+
+  // Load data akun admin ini ke ALL_DATA sementara
+  const savedAllData = [...ALL_DATA];
+  ALL_DATA.length = 0;
+
+  // Masukkan akun admin ini ke ALL_DATA
+  admin.accounts.forEach(acc => {
+    ALL_DATA.push({
+      id: acc.id,
+      name: acc.name,
+      platform: 'meta',
+      status: 'Aktif',
+      spend: acc.spend,
+      leads: acc.hasil,
+      cpr: acc.cpr,
+      imp: acc.impresi,
+      clicks: acc.klik,
+      ctr: 0,
+      roas: 0,
+      budget: 0
+    });
+  });
+
+  // Render dashboard view
+  showView('dashboard');
+  updateCounts();
+  renderAll();
+
+  // Tambah badge "Viewing: Admin X" di header
+  const lastUpdate = document.getElementById('last-update');
+  if (lastUpdate) lastUpdate.innerHTML = `
+    👁 Melihat dashboard <strong>${admin.label}</strong> &nbsp;
+    <button onclick="saBackToSuperAdmin(${JSON.stringify(savedAllData).replace(/"/g,"'")})" 
+      style="font-size:11px;padding:2px 8px;border-radius:5px;border:none;background:#f5a623;color:white;cursor:pointer;font-family:var(--sans)">
+      ← Kembali ke Super Admin
+    </button>
+  `;
+}
+
+function saBackToOverview() {
+  renderSuperAdminView(saAdminsData);
+}
+
+function saBackToSuperAdmin(savedData) {
+  // Restore ALL_DATA
+  ALL_DATA.length = 0;
+  if (Array.isArray(savedData)) savedData.forEach(a => ALL_DATA.push(a));
+  showView('superadmin');
+  renderSuperAdminView(saAdminsData);
 }
 
 async function saRefresh() {
