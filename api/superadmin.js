@@ -64,10 +64,9 @@ module.exports = async function handler(req, res) {
               const ins = insData.data?.[0];
 
               const spend = parseFloat(ins?.spend || 0);
-              const hasil = parseInt((ins?.actions || []).find(a =>
-                ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase',
-                 'lead','onsite_conversion.lead_grouped','onsite_web_lead','onsite_conversion.lead','offsite_conversion.fb_pixel_lead','onsite_web_app_purchase','web_app_in_store_purchase','onsite_web_purchase','purchase','onsite_conversion.messaging_first_reply','onsite_conversion.messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_user_depth_2_message_send'].includes(a.action_type)
-              )?.value || 0);
+              const _ht = ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','onsite_web_app_purchase','web_app_in_store_purchase','onsite_web_purchase','purchase','lead','onsite_conversion.lead_grouped','onsite_web_lead','onsite_conversion.lead','offsite_conversion.fb_pixel_lead','onsite_conversion.messaging_first_reply','onsite_conversion.messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_user_depth_2_message_send'];
+            let _ha = null; for (const _t of _ht) { _ha = (ins?.actions||ins?.data?.[0]?.actions||[]).find(a=>a.action_type===_t); if(_ha) break; }
+            const hasil = parseInt(_ha?.value || 0);
 
               allAccounts.push({
                 id: acc.id,
