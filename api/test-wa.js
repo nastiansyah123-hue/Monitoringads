@@ -1,4 +1,3 @@
-// api/test-wa.js
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -10,13 +9,30 @@ module.exports = async function handler(req, res) {
   if (!target || !message || !token) return res.status(400).json({ error: 'target, message, token wajib' });
 
   try {
+    // Fonnte pakai form-urlencoded bukan JSON
+    const params = new URLSearchParams();
+    params.append('target', target);
+    params.append('message', message);
+    params.append('countryCode', countryCode || '62');
+
     const resp = await fetch('https://fonnte.com/api/send-message', {
       method: 'POST',
-      headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target, message, countryCode: countryCode || '62' })
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: params.toString()
     });
-    const result = await resp.json();
-    return res.json(result);
+
+    const text = await resp.text();
+    console.log('Fonnte response:', text);
+
+    try {
+      const json = JSON.parse(text);
+      return res.json(json);
+    } catch(e) {
+      return res.json({ status: false, reason: 'Fonnte response: ' + text.substring(0, 200) });
+    }
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
