@@ -2335,21 +2335,36 @@ function loadMetaTokens() {
   sb.from('user_config').select('meta_tokens, meta_token').eq('user_id', currentUser.id).single()
     .then(({ data }) => {
       if (!data) return;
+
+      // Coba parse meta_tokens
+      let parsed = [];
       if (data.meta_tokens) {
         try {
-          const parsed = JSON.parse(data.meta_tokens);
-          if (parsed?.length) {
-            metaTokens = parsed;
-            localStorage.setItem('meta_tokens_' + currentUser.id, JSON.stringify(metaTokens));
-          }
-        } catch(e) {}
-      } else if (data.meta_token && !metaTokens.length) {
+          parsed = typeof data.meta_tokens === 'string'
+            ? JSON.parse(data.meta_tokens)
+            : data.meta_tokens;
+        } catch(e) { parsed = []; }
+      }
+
+      if (parsed?.length) {
+        // Pakai meta_tokens yang ada
+        metaTokens = parsed;
+      } else if (data.meta_token) {
         // Migrasi dari token tunggal ke multi-token
         metaTokens = [{ label: 'Token Utama', token: data.meta_token }];
+        // Simpan migrasi ke Supabase
+        sb.from('user_config').upsert({
+          user_id: currentUser.id,
+          meta_tokens: JSON.stringify(metaTokens),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' }).catch(()=>{});
+      }
+
+      if (metaTokens.length) {
+        localStorage.setItem('meta_tokens_' + currentUser.id, JSON.stringify(metaTokens));
+        apiConfig.meta = { token: metaTokens[0].token, bizId: '' };
       }
       renderMetaTokensList();
-      // Set apiConfig dengan token pertama
-      if (metaTokens[0]) apiConfig.meta = { token: metaTokens[0].token, bizId: '' };
     }).catch(()=>{});
   renderMetaTokensList();
 }
