@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
     const today = nowWIB.toISOString().split('T')[0];
 
     // 1. Ambil semua user config
-    const { data: userConfigs } = await sb.from('user_config').select('user_id, meta_token, meta_tokens, fonnte_token');
+    const { data: userConfigs } = await sb.from('user_config').select('user_id, meta_token, meta_tokens, fonnte_token, spv_name, spv_phone');
     if (!userConfigs?.length) return res.json({ alerts: 0 });
 
     // 2. Ambil semua account_limits
@@ -85,12 +85,14 @@ module.exports = async function handler(req, res) {
               return accounts.includes(acc.id);
             });
 
-            if (!adv?.pic_phone) continue;
+            // Kirim ke SPV, bukan PIC
 
             // Susun pesan alert
             const emoji = pct >= 90 ? '🚨' : '⚠️';
             const level = pct >= 90 ? 'KRITIS' : 'PERINGATAN';
+            const spvName = uc.spv_name || 'SPV';
             let pesan = `${emoji} *ALERT BUDGET ${level}*\n\n`;
+            pesan += `👔 Halo, *${spvName}*!\n`;
             pesan += `🏢 *${acc.name}*\n`;
             pesan += `🕐 ${jamStr}\n\n`;
             pesan += `📊 *Status Budget:*\n`;
@@ -103,8 +105,10 @@ module.exports = async function handler(req, res) {
             pesan += `\n\n_AdMonitor · Herbal Jaya_`;
 
             // Kirim WA
+            const targetPhone = uc.spv_phone;
+            if (!targetPhone) continue;
             const fonnteToken = uc.fonnte_token || FONNTE_TOKEN;
-            const waResult = await kirimWA(adv.pic_phone, pesan, fonnteToken);
+            const waResult = await kirimWA(targetPhone, pesan, fonnteToken);
 
             // Log agar tidak kirim lagi hari ini
             await sb.from('budget_alert_logs').insert({
