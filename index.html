@@ -1710,28 +1710,56 @@ async function testKirimWA() {
   const statusEl = document.getElementById('fonnte-status');
   if (!token) { statusEl.textContent = '❌ Isi Fonnte Token dulu'; statusEl.style.color='#f75c5c'; return; }
   if (!phone) { statusEl.textContent = '❌ Isi nomor HP dulu'; statusEl.style.color='#f75c5c'; return; }
-  statusEl.textContent = 'Mengirim...'; statusEl.style.color='var(--text2)';
+  statusEl.textContent = '⏳ Mengirim...'; statusEl.style.color='var(--text2)';
+
+  // Coba lewat Vercel endpoint dulu
   try {
     const resp = await fetch('/api/test-wa', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token,
-        target: phone.replace(/\D/g,''),
-        message: '✅ Test dari AdMonitor berhasil!\n\nSistem auto WA sudah terhubung dengan Fonnte.',
+        token, target: phone.replace(/\D/g,''),
+        message: '✅ Test dari AdMonitor!\n\nSistem WA Auto sudah terhubung.',
         countryCode: '62'
       })
     });
-    const r = await resp.json();
-    if (r.status) {
+    const text = await resp.text();
+    // Cek apakah response JSON
+    if (text.startsWith('{') || text.startsWith('[')) {
+      const r = JSON.parse(text);
+      if (r.status) {
+        statusEl.textContent = '✅ WA terkirim!';
+        statusEl.style.color = '#22d3a0';
+      } else {
+        statusEl.textContent = '❌ Gagal: ' + (r.reason || r.message || text);
+        statusEl.style.color = '#f75c5c';
+      }
+      return;
+    }
+  } catch(e) {}
+
+  // Fallback: kirim langsung ke Fonnte via form-data (bypass CORS)
+  try {
+    const formData = new FormData();
+    formData.append('target', phone.replace(/\D/g,''));
+    formData.append('message', '✅ Test dari AdMonitor!\n\nSistem WA Auto sudah terhubung.');
+    formData.append('countryCode', '62');
+
+    const resp2 = await fetch('https://fonnte.com/api/send-message', {
+      method: 'POST',
+      headers: { 'Authorization': token },
+      body: formData
+    });
+    const r2 = await resp2.json();
+    if (r2.status) {
       statusEl.textContent = '✅ WA terkirim!';
       statusEl.style.color = '#22d3a0';
     } else {
-      statusEl.textContent = '❌ Gagal: ' + (r.reason || r.message || JSON.stringify(r));
+      statusEl.textContent = '❌ Gagal: ' + (r2.reason || JSON.stringify(r2));
       statusEl.style.color = '#f75c5c';
     }
-  } catch(e) {
-    statusEl.textContent = '❌ Error: ' + e.message;
+  } catch(e2) {
+    statusEl.textContent = '❌ Error: ' + e2.message + ' — Pastikan file api/test-wa.js sudah diupload ke GitHub';
     statusEl.style.color = '#f75c5c';
   }
 }
