@@ -1372,16 +1372,22 @@ async function doLogin() {
   btn.disabled = false; btn.textContent = 'Masuk';
 
   // Cek apakah super admin
-  const { data: saData } = await sb.from('super_admins')
-    .select('user_id').eq('user_id', currentUser.id).single();
-  
-  if (saData) {
-    currentUser.isSuperAdmin = true;
-    await initSuperAdmin();
-  } else {
-    await loadUserConfig();
-    initApp();
+  try {
+    const { data: saData, error: saErr } = await sb.from('super_admins')
+      .select('user_id').eq('user_id', currentUser.id).single();
+    
+    if (!saErr && saData) {
+      currentUser.isSuperAdmin = true;
+      await initSuperAdmin();
+      return;
+    }
+  } catch(e) {
+    console.warn('Super admin check failed:', e.message);
   }
+
+  // Login normal
+  await loadUserConfig();
+  initApp();
 }
 
 async function doForgotPassword() {
@@ -3993,8 +3999,20 @@ function applyPlatformSelection() {
   const loggedIn = await checkSession();
   if (loggedIn) {
     document.getElementById('login-screen').classList.add('hidden');
-    await loadUserConfig(); // Tunggu sampai config + limits dari Supabase selesai
-    initApp();              // Baru init app dengan data lengkap
+
+    // Cek super admin saat reload
+    try {
+      const { data: saData, error: saErr } = await sb.from('super_admins')
+        .select('user_id').eq('user_id', currentUser.id).single();
+      if (!saErr && saData) {
+        currentUser.isSuperAdmin = true;
+        await initSuperAdmin();
+        return; // Stop — jangan lanjut ke initApp biasa
+      }
+    } catch(e) {}
+
+    await loadUserConfig();
+    initApp();
   } else {
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('welcome-screen').classList.add('hidden');
@@ -4005,6 +4023,19 @@ function applyPlatformSelection() {
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       currentUser = session.user;
+
+      // Cek super admin
+      try {
+        const { data: saData, error: saErr } = await sb.from('super_admins')
+          .select('user_id').eq('user_id', currentUser.id).single();
+        if (!saErr && saData) {
+          currentUser.isSuperAdmin = true;
+          await initSuperAdmin();
+          return;
+        }
+      } catch(e) {}
+
+      // Login normal
       await loadUserConfig();
       initApp();
     } else if (event === 'SIGNED_OUT') {
