@@ -100,7 +100,17 @@ module.exports = async function handler(req, res) {
       };
     }));
 
-    return res.json({ admins: results.filter(Boolean), since: sinceDate, until: untilDate });
+    // Ambil semua account_limits
+    const { data: allLimits } = await sb.from('account_limits')
+      .select('user_id, account_id, limit_amount, saldo_awal, spend_saat_set');
+
+    // Attach limits ke setiap admin
+    const adminsWithLimits = results.filter(Boolean).map(admin => ({
+      ...admin,
+      limits: (allLimits || []).filter(l => l.user_id === admin.userId)
+    }));
+
+    return res.json({ admins: adminsWithLimits, since: sinceDate, until: untilDate });
 
   } catch(e) {
     console.error(e);
