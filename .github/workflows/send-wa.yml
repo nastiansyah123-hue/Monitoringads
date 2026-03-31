@@ -1,0 +1,20 @@
+name: Send WA Auto
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 09.00 WIB
+    - cron: '0 7 * * *'   # 14.00 WIB
+    - cron: '0 11 * * *'  # 18.00 WIB
+    - cron: '0 14 * * *'  # 21.00 WIB
+  workflow_dispatch:  # Bisa trigger manual juga
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger send-wa endpoint
+        run: |
+          curl -X POST https://monitoringads.vercel.app/api/send-wa \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --silent --show-error
