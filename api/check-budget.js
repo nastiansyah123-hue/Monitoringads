@@ -25,16 +25,22 @@ module.exports = async function handler(req, res) {
 
     const allLimits = limitsRes.data || [];
     const allConfigs = configsRes.data || [];
+    
+    // Debug log
+    console.log('limitsRes error:', limitsRes.error?.message);
+    console.log('configsRes error:', configsRes.error?.message);
+    console.log('allLimits count:', allLimits.length);
+    console.log('allConfigs count:', allConfigs.length);
     const allAdvertisers = advertisersRes.data || [];
     const sentToday = new Set((logsRes.data || []).map(l => `${l.account_id}_${l.alert_type}`));
 
     if (!allLimits.length) return res.json({ alerts: 0, reason: 'no limits set', limitsCount: 0 });
     if (!allConfigs.length) {
-      // Debug: coba query langsung
       const { data: testData, error: testErr } = await sb.from('user_config').select('user_id').limit(5);
       return res.json({ 
         alerts: 0, reason: 'no user configs',
         limitsCount: allLimits.length,
+        configsError: configsRes.error?.message,
         testQuery: testData,
         testError: testErr?.message,
         serviceKeyPrefix: process.env.SUPABASE_SERVICE_KEY?.substring(0,20)
