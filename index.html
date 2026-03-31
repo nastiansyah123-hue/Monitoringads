@@ -2603,13 +2603,20 @@ async function fetchAndRenderMeta(adAccounts) {
       // Ambil jumlah lead dari actions
       const actions = row?.actions || [];
 
-      // Hasil = web_in_store_purchase (pembelian via toko)
+      // Hasil = ambil berdasarkan prioritas
       const hasilTypes = [
         'web_in_store_purchase',
         'omni_purchase',
         'offsite_conversion.fb_pixel_purchase',
+        'onsite_web_app_purchase',
+        'web_app_in_store_purchase',
+        'onsite_web_purchase',
+        'purchase',
         'lead',
         'onsite_conversion.lead_grouped',
+        'onsite_web_lead',
+        'onsite_conversion.lead',
+        'offsite_conversion.fb_pixel_lead',
         'onsite_conversion.messaging_first_reply',
         'onsite_conversion.messaging_conversation_started_7d',
         'onsite_conversion.total_messaging_connection',
