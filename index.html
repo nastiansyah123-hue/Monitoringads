@@ -1560,18 +1560,9 @@ const PLATFORMS = {
   tiktok: { label:'TikTok Ads', color:'#010101', textColor:'#e2e8f0', bg:'rgba(255,255,255,0.08)' },
 };
 
-const DUMMY_DATA = [
-  { id:'ADV-001', name:'Tokopedia', platform:'google', status:'Aktif', spend:820000000, ctr:4.2, roas:5.1, imp:2400000, budget:90, leads:0 },
-  { id:'ADV-003', name:'Gojek', platform:'tiktok', status:'Aktif', spend:540000000, ctr:4.0, roas:4.3, imp:1650000, budget:60, leads:0 },
-  { id:'ADV-005', name:'Grab ID', platform:'google', status:'Paused', spend:310000000, ctr:3.1, roas:3.5, imp:980000, budget:40, leads:0 },
-  { id:'ADV-006', name:'Traveloka', platform:'tiktok', status:'Aktif', spend:280000000, ctr:3.6, roas:4.0, imp:870000, budget:38, leads:0 },
-  { id:'ADV-007', name:'OVO Finance', platform:'google', status:'Aktif', spend:245000000, ctr:2.7, roas:3.2, imp:740000, budget:85, leads:0 },
-  { id:'ADV-009', name:'Blibli', platform:'tiktok', status:'Aktif', spend:175000000, ctr:3.3, roas:3.9, imp:550000, budget:35, leads:0 },
-  { id:'ADV-011', name:'Dana Dompet', platform:'google', status:'Aktif', spend:95000000, ctr:2.1, roas:2.8, imp:310000, budget:28, leads:0 },
-  { id:'ADV-012', name:'Tiket.com', platform:'tiktok', status:'Ended', spend:78000000, ctr:1.7, roas:1.9, imp:240000, budget:100, leads:0 },
-];
+const DUMMY_DATA = []; // Tidak ada data dummy — semua data dari API real
 
-const ALL_DATA = [...DUMMY_DATA.map(a=>({...a}))];
+const ALL_DATA = [];
 
 // Cache data Meta real ke localStorage agar tidak hilang saat token expired
 function saveMetaCache(rows) {
@@ -2889,9 +2880,8 @@ function renderBudgetAlerts(data) {
 
 function backToWelcome() {
   localStorage.removeItem('admonitor_platforms');
-  // Reset ALL_DATA ke semua dummy
+  // Reset ALL_DATA ke kosong
   ALL_DATA.length = 0;
-  DUMMY_DATA.forEach(a => ALL_DATA.push({...a}));
   welcomeSelected.clear();
   ['meta','google','tiktok'].forEach(p => {
     document.getElementById('wp-'+p).classList.remove('wp-selected');
