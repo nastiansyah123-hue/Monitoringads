@@ -522,6 +522,10 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L0 24l6.337-1.504A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.68-.52-5.21-1.42l-.37-.22-3.86.916.978-3.77-.24-.39A10 10 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
         WA Auto
       </button>
+      <button class="nav-item" id="nav-tim" onclick="showView('tim')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        Tim
+      </button>
     </div>
     <div class="nav-section">
       <div class="nav-label">Integrasi</div>
@@ -1245,6 +1249,62 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     </div>
 
     <!-- View: Finance -->
+    <!-- View: Tim -->
+    <div id="view-tim" style="display:none;min-height:100vh;background:var(--bg)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div>
+          <h1 style="font-size:17px;font-weight:600">👥 Manajemen Tim</h1>
+          <p style="font-size:11px;color:var(--text2);margin-top:2px">Kelola akses karyawan ke dashboard</p>
+        </div>
+        <button onclick="openTimModal()" style="padding:7px 16px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)">+ Tambah Karyawan</button>
+      </div>
+      <div style="padding:22px 28px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+              <span style="padding:2px 8px;border-radius:100px;background:rgba(79,142,247,0.15);color:#4f8ef7;font-size:11px">ADV</span>Role ADV
+            </div>
+            <div style="font-size:11px;color:var(--text2);line-height:1.6">Bisa lihat & edit limit akun, catat pembayaran. Tidak bisa lihat kampanye iklan.</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+              <span style="padding:2px 8px;border-radius:100px;background:rgba(34,211,160,0.15);color:#22d3a0;font-size:11px">VIEWER</span>Role Viewer
+            </div>
+            <div style="font-size:11px;color:var(--text2);line-height:1.6">Bisa lihat dashboard & kampanye. Tidak bisa edit apapun.</div>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600">Daftar Karyawan</div>
+          <div id="tim-list" style="min-height:80px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Tambah Karyawan -->
+    <div id="tim-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+      <div style="background:var(--surface);border-radius:12px;padding:24px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+        <div style="font-size:15px;font-weight:600;margin-bottom:18px">Tambah Karyawan</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Email Karyawan</label>
+          <input id="tim-f-email" type="email" placeholder="email@contoh.com"
+            style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Karyawan harus sudah daftar akun dulu di AdMonitor</div>
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Role</label>
+          <select id="tim-f-role" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+            <option value="adv">ADV — Edit limit & catat bayar</option>
+            <option value="viewer">Viewer — Lihat dashboard saja</option>
+          </select>
+        </div>
+        <div id="tim-modal-err" style="font-size:12px;color:#f75c5c;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closeTimModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:13px">Batal</button>
+          <button onclick="saveTim()" id="tim-modal-btn" style="padding:8px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500">Tambah</button>
+        </div>
+      </div>
+    </div>
+
     <div id="view-adv" style="display:none;min-height:100vh;background:var(--bg)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
         <div>
@@ -1912,6 +1972,102 @@ async function testKirimWASPV() {
 }
 
 // ── Fonnte WA Config ─────────────────────────────────────────────
+// ── Tim Management ────────────────────────────────────────────────
+function openTimModal() {
+  document.getElementById('tim-f-email').value = '';
+  document.getElementById('tim-f-role').value = 'adv';
+  document.getElementById('tim-modal-err').textContent = '';
+  document.getElementById('tim-modal').style.display = 'flex';
+}
+function closeTimModal() { document.getElementById('tim-modal').style.display = 'none'; }
+
+async function saveTim() {
+  const email = document.getElementById('tim-f-email').value.trim();
+  const role = document.getElementById('tim-f-role').value;
+  const errEl = document.getElementById('tim-modal-err');
+  const btn = document.getElementById('tim-modal-btn');
+  if (!email) { errEl.textContent = 'Email wajib diisi'; return; }
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+
+  // Cari user_id dari email via Supabase
+  const { data: userData, error: userErr } = await sb.from('user_config')
+    .select('user_id').limit(1);
+  
+  // Cari via auth - gunakan endpoint Vercel
+  try {
+    const resp = await fetch('/api/get-user-by-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await sb.auth.getSession()).data.session?.access_token },
+      body: JSON.stringify({ email })
+    });
+    const result = await resp.json();
+    if (!result.user_id) { errEl.textContent = 'Email tidak ditemukan. Pastikan karyawan sudah daftar di AdMonitor.'; btn.disabled=false; btn.textContent='Tambah'; return; }
+
+    const table = role === 'adv' ? 'adv_users' : 'viewer_users';
+    const { error } = await sb.from(table).upsert({
+      user_id: result.user_id,
+      admin_user_id: currentUser.id,
+      created_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+
+    btn.disabled = false; btn.textContent = 'Tambah';
+    if (error) { errEl.textContent = 'Gagal: ' + error.message; return; }
+    closeTimModal();
+    loadTimList();
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message;
+    btn.disabled = false; btn.textContent = 'Tambah';
+  }
+}
+
+async function loadTimList() {
+  const listEl = document.getElementById('tim-list');
+  if (!listEl || !currentUser) return;
+  listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat...</div>';
+
+  const [advRes, viewerRes] = await Promise.all([
+    sb.from('adv_users').select('user_id, created_at').eq('admin_user_id', currentUser.id),
+    sb.from('viewer_users').select('user_id, created_at').eq('admin_user_id', currentUser.id)
+  ]);
+
+  const allMembers = [
+    ...((advRes.data||[]).map(d => ({...d, role: 'adv'}))),
+    ...((viewerRes.data||[]).map(d => ({...d, role: 'viewer'})))
+  ];
+
+  if (!allMembers.length) {
+    listEl.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text2)">Belum ada karyawan. Klik "+ Tambah Karyawan"</div>';
+    return;
+  }
+
+  listEl.innerHTML = allMembers.map(m => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:14px">👤</div>
+        <div>
+          <div style="font-size:12px;font-weight:500;font-family:var(--mono)">${m.user_id}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">Ditambah: ${new Date(m.created_at).toLocaleDateString('id-ID')}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="padding:2px 10px;border-radius:100px;font-size:11px;font-weight:500;
+          background:${m.role==='adv'?'rgba(79,142,247,0.15)':'rgba(34,211,160,0.15)'};
+          color:${m.role==='adv'?'#4f8ef7':'#22d3a0'}">
+          ${m.role==='adv'?'ADV':'Viewer'}
+        </span>
+        <button onclick="deleteTim('${m.user_id}','${m.role}')" style="font-size:11px;padding:3px 8px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer">Hapus</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteTim(userId, role) {
+  if (!confirm('Hapus akses karyawan ini?')) return;
+  const table = role === 'adv' ? 'adv_users' : 'viewer_users';
+  await sb.from(table).delete().eq('user_id', userId);
+  loadTimList();
+}
+
 // ── Finance Role ─────────────────────────────────────────────────
 let advAdminId = null;
 let advAccounts = [];
@@ -3859,6 +4015,12 @@ function showView(view) {
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadFonnteConfig();
     renderJadwalGrid();
+  } else if (view === 'tim') {
+    document.getElementById('view-tim').style.display = 'block';
+    const navEl = document.getElementById('nav-tim');
+    if (navEl) navEl.classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
+    loadTimList();
   } else if (view === 'finance') {
     document.getElementById('view-adv').style.display = 'block';
     const navEl = document.getElementById('nav-adv');
