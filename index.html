@@ -1100,16 +1100,24 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="#22d3a0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L0 24l6.337-1.504A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.68-.52-5.21-1.42l-.37-.22-3.86.916.978-3.77-.24-.39A10 10 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
             Konfigurasi Fonnte
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div style="display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:14px">
             <div>
               <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Fonnte Token</label>
               <input id="cfg-fonnte-token" type="password" placeholder="Token dari fonnte.com" oninput="saveFonnteConfig()"
                 style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
             </div>
-            <div>
-              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Jadwal WA (jam WIB, pisah koma)</label>
-              <input id="cfg-wa-jadwal" type="text" placeholder="9,14,18,21" value="9,14,18,21" oninput="saveFonnteConfig()"
-                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+
+          <!-- Pilih Jadwal -->
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:8px;font-weight:500">
+              Jadwal Kirim WA (WIB) — pilih jam yang diinginkan
+            </label>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px" id="jadwal-grid">
+              <!-- Diisi oleh JS -->
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:var(--text3)">
+              ⚠️ Perubahan jadwal butuh update <code>vercel.json</code> atau GitHub Actions. Lihat petunjuk di bawah.
             </div>
           </div>
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
@@ -1123,9 +1131,10 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
             </button>
           </div>
           <div id="fonnte-status" style="font-size:12px;color:var(--text2);margin-top:10px;font-family:var(--mono)"></div>
-          <div style="margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6">
+          <div style="margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.8">
             ⚠️ Agar cron otomatis berjalan, set di <strong>Vercel Environment Variables</strong>:<br>
-            <code>FONNTE_TOKEN</code> · <code>SUPABASE_URL</code> · <code>SUPABASE_SERVICE_KEY</code> · <code>CRON_SECRET</code>
+            <code>FONNTE_TOKEN</code> · <code>SUPABASE_URL</code> · <code>SUPABASE_SERVICE_KEY</code> · <code>CRON_SECRET</code><br><br>
+            <div id="jadwal-vercel-info" style="color:var(--text2)"></div>
           </div>
         </div>
 
@@ -1811,20 +1820,98 @@ async function testKirimWASPV() {
 }
 
 // ── Fonnte WA Config ─────────────────────────────────────────────
+function renderJadwalGrid() {
+  const grid = document.getElementById('jadwal-grid');
+  if (!grid) return;
+  const saved = JSON.parse(localStorage.getItem('wa_jadwal_arr') || '[9,14,18,21]');
+  let html = '';
+  for (let h = 0; h < 24; h++) {
+    const label = String(h).padStart(2,'0') + '.00';
+    const checked = saved.includes(h);
+    html += `<label style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:8px;cursor:pointer;border:1px solid ${checked?'#4f8ef7':'var(--border2)'};background:${checked?'rgba(79,142,247,0.1)':'var(--surface2)'};transition:all .15s" onclick="toggleJam(${h},this)">
+      <input type="checkbox" value="${h}" ${checked?'checked':''} style="display:none">
+      <span style="font-size:12px;font-weight:${checked?'600':'400'};color:${checked?'#4f8ef7':'var(--text2)'};font-family:var(--mono)">${label}</span>
+    </label>`;
+  }
+  grid.innerHTML = html;
+}
+
+function toggleJam(h, el) {
+  const cb = el.querySelector('input');
+  cb.checked = !cb.checked;
+  if (cb.checked) {
+    el.style.borderColor = '#4f8ef7';
+    el.style.background = 'rgba(79,142,247,0.1)';
+    el.querySelector('span').style.color = '#4f8ef7';
+    el.querySelector('span').style.fontWeight = '600';
+  } else {
+    el.style.borderColor = 'var(--border2)';
+    el.style.background = 'var(--surface2)';
+    el.querySelector('span').style.color = 'var(--text2)';
+    el.querySelector('span').style.fontWeight = '400';
+  }
+  saveFonnteConfig();
+}
+
+function getSelectedJam() {
+  const cbs = document.querySelectorAll('#jadwal-grid input[type=checkbox]:checked');
+  return [...cbs].map(c => parseInt(c.value)).sort((a,b)=>a-b);
+}
+
 function saveFonnteConfig() {
   const token = document.getElementById('cfg-fonnte-token').value.trim();
-  const jadwal = document.getElementById('cfg-wa-jadwal').value.trim();
+  const jamArr = getSelectedJam();
   localStorage.setItem('fonnte_token', token);
-  localStorage.setItem('wa_jadwal', jadwal);
-  // Simpan ke Supabase juga
+  localStorage.setItem('wa_jadwal_arr', JSON.stringify(jamArr));
+  localStorage.setItem('wa_jadwal', jamArr.join(','));
+
+  // Simpan ke Supabase
   if (currentUser && token) {
     sb.from('user_config').upsert({
       user_id: currentUser.id,
       fonnte_token: token,
-      wa_jadwal: jadwal,
+      wa_jadwal: jamArr.join(','),
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' }).catch(()=>{});
+    }, { onConflict: 'user_id' }).then(() => {
+      // Update vercel.json info
+      updateJadwalInfo(jamArr);
+    }).catch(()=>{});
   }
+}
+
+function updateJadwalInfo(jamArr) {
+  const infoEl = document.getElementById('jadwal-vercel-info');
+  if (!infoEl || !jamArr.length) return;
+  // Konversi WIB ke UTC untuk cron
+  const cronLines = jamArr.map(h => {
+    const utc = (h - 7 + 24) % 24;
+    return `{ "path": "/api/send-wa", "schedule": "0 ${utc} * * *" }`;
+  });
+  infoEl.innerHTML = `<strong>Update vercel.json "crons":</strong><br><code style="font-size:10px;white-space:pre">${cronLines.join(',\n')}</code>`;
+}
+
+function loadFonnteConfig() {
+  const token = localStorage.getItem('fonnte_token') || '';
+  const jamArr = JSON.parse(localStorage.getItem('wa_jadwal_arr') || '[9,14,18,21]');
+  const tokenEl = document.getElementById('cfg-fonnte-token');
+  if (tokenEl) tokenEl.value = token;
+  // Load dari Supabase juga
+  if (currentUser) {
+    sb.from('user_config').select('fonnte_token,wa_jadwal').eq('user_id', currentUser.id).single()
+      .then(({ data }) => {
+        if (!data) return;
+        if (data.fonnte_token && tokenEl) tokenEl.value = data.fonnte_token;
+        if (data.wa_jadwal) {
+          const arr = data.wa_jadwal.split(',').map(Number).filter(n => !isNaN(n));
+          localStorage.setItem('wa_jadwal_arr', JSON.stringify(arr));
+          localStorage.setItem('wa_jadwal', data.wa_jadwal);
+        }
+        renderJadwalGrid();
+        updateJadwalInfo(getSelectedJam());
+      }).catch(()=>{});
+  }
+  renderJadwalGrid();
+  updateJadwalInfo(jamArr);
 }
 
 async function testKirimWA() {
@@ -1834,6 +1921,8 @@ async function testKirimWA() {
   if (!token) { statusEl.textContent = '❌ Isi Fonnte Token dulu'; statusEl.style.color='#f75c5c'; return; }
   if (!phone) { statusEl.textContent = '❌ Isi nomor HP dulu'; statusEl.style.color='#f75c5c'; return; }
   statusEl.textContent = '⏳ Mengirim...'; statusEl.style.color='var(--text2)';
+
+  let terkirim = false;
 
   // Coba lewat Vercel endpoint dulu
   try {
@@ -1847,28 +1936,29 @@ async function testKirimWA() {
       })
     });
     const text = await resp.text();
-    // Cek apakah response JSON
     if (text.startsWith('{') || text.startsWith('[')) {
       const r = JSON.parse(text);
       if (r.status) {
         statusEl.textContent = '✅ WA terkirim!';
         statusEl.style.color = '#22d3a0';
+        terkirim = true;
       } else {
         statusEl.textContent = '❌ Gagal: ' + (r.reason || r.message || text);
         statusEl.style.color = '#f75c5c';
+        terkirim = true;
       }
-      return;
     }
   } catch(e) {}
 
-  // Fallback: kirim langsung ke Fonnte via form-data (bypass CORS)
+  if (terkirim) return;
+
+  // Fallback: kirim langsung ke Fonnte via form-data
   try {
     const formData = new FormData();
     formData.append('target', phone.replace(/\D/g,''));
     formData.append('message', '✅ Test dari AdMonitor!\n\nSistem WA Auto sudah terhubung.');
     formData.append('countryCode', '62');
-
-    const resp2 = await fetch('https://fonnte.com/api/send-message', {
+    const resp2 = await fetch('https://api.fonnte.com/send', {
       method: 'POST',
       headers: { 'Authorization': token },
       body: formData
@@ -1882,19 +1972,12 @@ async function testKirimWA() {
       statusEl.style.color = '#f75c5c';
     }
   } catch(e2) {
-    statusEl.textContent = '❌ Error: ' + e2.message + ' — Pastikan file api/test-wa.js sudah diupload ke GitHub';
+    statusEl.textContent = '❌ Error: ' + e2.message;
     statusEl.style.color = '#f75c5c';
   }
 }
 
-function loadFonnteConfig() {
-  const token = localStorage.getItem('fonnte_token') || '';
-  const jadwal = localStorage.getItem('wa_jadwal') || '9,14,18,21';
-  const tokenEl = document.getElementById('cfg-fonnte-token');
-  const jadwalEl = document.getElementById('cfg-wa-jadwal');
-  if (tokenEl) tokenEl.value = token;
-  if (jadwalEl) jadwalEl.value = jadwal;
-}
+// loadFonnteConfig moved to new version above
 
 // ── Multi Token Meta ──────────────────────────────────────────────
 let metaTokens = []; // Array of {label, token}
@@ -3055,6 +3138,7 @@ function showView(view) {
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadFonnteConfig();
     loadSpvConfig();
+    renderJadwalGrid();
   }
   window.scrollTo(0, 0);
 }
