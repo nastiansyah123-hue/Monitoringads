@@ -2326,16 +2326,13 @@ async function advSaveLimit(accId, currentSpend) {
   const saldoVal = parseFloat(document.getElementById('adv-saldo-'+accId)?.value || 0);
   if (!limitVal || limitVal <= 0) { alert('Limit wajib diisi'); return; }
 
-  const { error } = await sb.from('account_limits').upsert({
-    user_id: advAdminId,
-    account_id: accId,
-    limit_amount: limitVal,
-    saldo_awal: saldoVal,
-    spend_saat_set: currentSpend,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id,account_id' });
-
-  if (error) { alert('Gagal: ' + error.message); return; }
+  const resp = await fetch('/api/save-limit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ member_id: currentUser.id, admin_user_id: advAdminId, account_id: accId, limit_amount: limitVal, saldo_awal: saldoVal, spend_saat_set: currentSpend })
+  });
+  const r = await resp.json();
+  if (r.error) { alert('Gagal: ' + r.error); return; }
   advLoadAccounts();
 }
 
@@ -2346,16 +2343,13 @@ async function advSaveBayar(accId, tertunggak, currentSpend, limit) {
 
   const sisaSetelahBayar = Math.max(0, tertunggak - bayar);
 
-  const { error } = await sb.from('account_limits').upsert({
-    user_id: advAdminId,
-    account_id: accId,
-    limit_amount: limit,
-    saldo_awal: sisaSetelahBayar,
-    spend_saat_set: currentSpend,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id,account_id' });
-
-  if (error) { if(statusEl) statusEl.textContent = '❌ Gagal: ' + error.message; return; }
+  const resp = await fetch('/api/save-limit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ member_id: currentUser.id, admin_user_id: advAdminId, account_id: accId, limit_amount: limit, saldo_awal: sisaSetelahBayar, spend_saat_set: currentSpend })
+  });
+  const r = await resp.json();
+  if (r.error) { if(statusEl) { statusEl.textContent = '❌ Gagal: ' + r.error; statusEl.style.color='#f75c5c'; } return; }
   if(statusEl) { statusEl.textContent = `✅ Bayar ${fmtRp(bayar)} tercatat!`; statusEl.style.color='#22d3a0'; }
   setTimeout(() => advLoadAccounts(), 1000);
 }
