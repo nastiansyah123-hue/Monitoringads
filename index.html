@@ -1886,77 +1886,45 @@ async function saLoadAllAdmins() {
   const listEl = document.getElementById('sa-admins-list');
   const summaryEl = document.getElementById('sa-summary');
   if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat data semua admin...</div>';
+  if (summaryEl) summaryEl.innerHTML = '';
 
-  const sb2 = supabase.createClient(
-    'https://ibokbgpnmwthmbfdvyxt.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlib2tiZ3BubXd0aG1iZmR2eXh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTgwMzQsImV4cCI6MjA5MDQzNDAzNH0.Df-6kvafuO-nQViUX6Tww-F3P9oRQpod9DtVADP88QM'
-  );
+  try {
+    const resp = await fetch('/api/superadmin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: currentUser.id })
+    });
+    const data = await resp.json();
 
-  // Ambil semua user config
-  const { data: configs } = await sb2.from('user_config').select('user_id, meta_token');
-  if (!configs?.length) {
-    listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Tidak ada admin terdaftar</div>';
-    return;
-  }
-
-  saAdminsData = [];
-  const today = getTodayLocal();
-
-  // Update filter dropdown
-  const filterSel = document.getElementById('sa-filter-admin');
-  if (filterSel) {
-    filterSel.innerHTML = '<option value="all">Semua Admin</option>';
-  }
-
-  // Fetch data per admin paralel
-  const promises = configs.map(async (cfg, idx) => {
-    if (!cfg.meta_token) return null;
-    try {
-      // Fetch akun iklan dari Meta
-      const accRes = await fetch(
-        `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${cfg.meta_token}&fields=id,name,account_status,insights.date_preset(today){spend,actions}&limit=50`
-      );
-      const accData = await accRes.json();
-      if (accData.error) return null;
-
-      const accounts = (accData.data || []).map(acc => {
-        const ins = acc.insights?.data?.[0];
-        const spend = parseFloat(ins?.spend || 0);
-        const hasil = parseInt((ins?.actions || []).find(a =>
-          ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','lead'].includes(a.action_type)
-        )?.value || 0);
-        return { id: acc.id, name: acc.name, spend, hasil, cpr: hasil > 0 ? Math.round(spend/hasil) : 0 };
-      });
-
-      const totalSpend = accounts.reduce((s,a) => s+a.spend, 0);
-      const totalHasil = accounts.reduce((s,a) => s+a.hasil, 0);
-
-      return {
-        userId: cfg.user_id,
-        label: `Admin ${idx+1}`,
-        accounts,
-        totalSpend,
-        totalHasil,
-        avgCPR: totalHasil > 0 ? Math.round(totalSpend/totalHasil) : 0,
-        jumlahAkun: accounts.length
-      };
-    } catch(e) { return null; }
-  });
-
-  const results = (await Promise.all(promises)).filter(Boolean);
-  saAdminsData = results;
-
-  // Update dropdown filter
-  results.forEach((admin, i) => {
-    if (filterSel) {
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = admin.label + ` (${admin.jumlahAkun} akun)`;
-      filterSel.appendChild(opt);
+    if (data.error) {
+      if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:#f75c5c">${data.error}</div>`;
+      return;
     }
-  });
 
-  renderSuperAdminView(results);
+    // Format data untuk render
+    saAdminsData = data.admins.map((admin, i) => ({
+      ...admin,
+      label: `Admin ${i+1}`,
+      avgCPR: admin.totalHasil > 0 ? Math.round(admin.totalSpend / admin.totalHasil) : 0
+    }));
+
+    // Update dropdown filter
+    const filterSel = document.getElementById('sa-filter-admin');
+    if (filterSel) {
+      filterSel.innerHTML = '<option value="all">Semua Admin</option>';
+      saAdminsData.forEach((admin, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${admin.label} (${admin.jumlahAkun} akun)`;
+        filterSel.appendChild(opt);
+      });
+    }
+
+    renderSuperAdminView(saAdminsData);
+
+  } catch(e) {
+    if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:#f75c5c">Error: ${e.message}</div>`;
+  }
 }
 
 function renderSuperAdminView(admins) {
