@@ -1335,8 +1335,31 @@ async function doForgotPassword() {
 }
 
 async function doLogout() {
+  const uid = currentUser?.id;
   await sb.auth.signOut();
   currentUser = null;
+
+  // Hapus semua data user dari localStorage
+  const keysToRemove = [
+    'admonitor_platforms', 'admonitor_config', 'admonitor_limits',
+    'admonitor_date', 'admonitor_last_view', 'admonitor_meta_cache',
+    'fonnte_token', 'wa_jadwal'
+  ];
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  // Hapus key per user_id juga
+  if (uid) {
+    localStorage.removeItem('admonitor_config_' + uid);
+    localStorage.removeItem('admonitor_platforms_' + uid);
+    localStorage.removeItem('admonitor_limits_' + uid);
+  }
+
+  // Reset state
+  ALL_DATA = [];
+  manualLimits = {};
+  welcomeSelected.clear();
+  apiConfig = {};
+
   document.getElementById('app-layout').style.display = 'none';
   document.getElementById('welcome-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
@@ -1344,17 +1367,16 @@ async function doLogout() {
   document.getElementById('login-pass').value = '';
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-error').style.color = '';
-  // Reset platform selection
-  welcomeSelected.clear();
-  localStorage.removeItem('admonitor_platforms');
 }
 
 // ── Supabase Config per User ──────────────────────────────────────
 async function loadUserConfig() {
   if (!currentUser) return;
 
-  // Load dari localStorage dulu sebagai cache cepat
-  const cachedConfig = localStorage.getItem('admonitor_config');
+  const uid = currentUser.id;
+
+  // Load dari localStorage dengan key per user_id
+  const cachedConfig = localStorage.getItem('admonitor_config_' + uid);
   if (cachedConfig) {
     try {
       const cached = JSON.parse(cachedConfig);
@@ -1365,10 +1387,14 @@ async function loadUserConfig() {
   }
 
   try {
-    const { data, error } = await sb.from('user_config').select('*').eq('user_id', currentUser.id).single();
-    if (error || !data) return;
+    const { data, error } = await sb.from('user_config').select('*').eq('user_id', uid).single();
+    if (error || !data) {
+      // User baru — tidak ada config, mulai fresh
+      apiConfig = {};
+      return;
+    }
 
-    // Override dengan data dari Supabase (lebih fresh)
+    // Override dengan data Supabase
     if (data.meta_token) apiConfig.meta = { token: data.meta_token, bizId: data.meta_biz_id || '' };
     if (data.google_token) apiConfig.google = { token: data.google_token, mccId: data.google_mcc_id || '' };
     if (data.tiktok_token) apiConfig.tiktok = { token: data.tiktok_token, advId: data.tiktok_adv_id || '' };
@@ -1376,10 +1402,10 @@ async function loadUserConfig() {
     if (data.platforms?.length) {
       welcomeSelected.clear();
       data.platforms.forEach(p => welcomeSelected.add(p));
-      localStorage.setItem('admonitor_platforms', JSON.stringify(data.platforms));
+      localStorage.setItem('admonitor_platforms_' + uid, JSON.stringify(data.platforms));
     }
 
-    localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
+    localStorage.setItem('admonitor_config_' + uid, JSON.stringify(apiConfig));
   } catch(e) {
     console.warn('Supabase load failed, using localStorage cache');
   }
@@ -1388,8 +1414,9 @@ async function loadUserConfig() {
 
 async function saveUserConfig() {
   if (!currentUser) { saveConfig(); return; }
+  const uid = currentUser.id;
   const cfg = {
-    user_id: currentUser.id,
+    user_id: uid,
     meta_token: apiConfig.meta?.token || null,
     meta_biz_id: apiConfig.meta?.bizId || null,
     google_token: apiConfig.google?.token || null,
@@ -1399,7 +1426,7 @@ async function saveUserConfig() {
     platforms: [...welcomeSelected],
     updated_at: new Date().toISOString(),
   };
-  // Non-blocking — tidak perlu await
+  localStorage.setItem('admonitor_config_' + uid, JSON.stringify(apiConfig));
   sb.from('user_config').upsert(cfg, { onConflict: 'user_id' })
     .then(() => console.log('Config synced to Supabase'))
     .catch(e => console.warn('Supabase sync failed:', e));
@@ -1567,7 +1594,7 @@ let charts = {};
 const DEFAULT_META_TOKEN = 'PASTE_TOKEN_DISINI'; // Ganti dengan token kamu
 const DEFAULT_META_PLATFORMS = ['meta'];          // Platform default
 
-let apiConfig = JSON.parse(localStorage.getItem('admonitor_config') || '{}');
+let apiConfig = {}; // Akan diload per user saat login
 
 // Jika token belum ada di localStorage, pakai default
 if (!apiConfig.meta?.token && DEFAULT_META_TOKEN !== 'PASTE_TOKEN_DISINI') {
