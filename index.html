@@ -619,24 +619,15 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
     <!-- API Config Panel (collapsible) -->
     <div class="api-panel" id="api-panel">
       <div class="api-panel-inner">
-        <div>
-          <div style="font-size:11px;font-weight:600;color:var(--meta-text);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-            <div style="width:14px;height:14px;border-radius:3px;background:#1877F2;display:flex;align-items:center;justify-content:center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg></div>
-            Meta Ads
-          </div>
-          <div class="api-field" style="margin-bottom:6px;">
-            <div class="api-label">Access Token</div>
-            <div style="position:relative">
-              <input class="api-input" type="text" id="cfg-meta-token" placeholder="EAAxxxxxx..." oninput="saveConfig()" style="padding-right:70px;font-size:10px;letter-spacing:0.5px">
-              <button onclick="toggleCfgToken('cfg-meta-token',this)" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:10px;color:var(--text2);padding:2px 6px;border-radius:4px;background:var(--surface3)">Sembunyikan</button>
+        <div style="grid-column:1/-1">
+          <div style="font-size:11px;font-weight:600;color:var(--meta-text);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:14px;height:14px;border-radius:3px;background:#1877F2;display:flex;align-items:center;justify-content:center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg></div>
+              Meta Ads Tokens
             </div>
-            <textarea id="cfg-meta-token-area" placeholder="Atau paste token panjang di sini lalu klik Simpan Token..." style="font-family:var(--mono);font-size:10px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:100%;margin-top:5px;resize:vertical;min-height:50px;line-break:anywhere;word-break:break-all;"></textarea>
-            <button onclick="saveTokenFromArea()" style="font-family:var(--sans);font-size:11px;margin-top:4px;padding:5px 14px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;">Simpan Token dari area di atas</button>
+            <button onclick="addMetaToken()" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-family:var(--sans)">+ Tambah Token</button>
           </div>
-          <div class="api-field">
-            <div class="api-label">Business ID <span style="font-size:10px;color:var(--text3)">(opsional)</span></div>
-            <input class="api-input" type="text" id="cfg-meta-biz" placeholder="Kosongkan jika pakai me/adaccounts" oninput="saveConfig()">
-          </div>
+          <div id="meta-tokens-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
         </div>
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--google-text);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
@@ -1439,6 +1430,7 @@ async function loadUserConfig() {
     console.warn('Supabase load failed, using localStorage cache');
   }
   await loadManualLimits();
+  loadMetaTokens();
 }
 
 async function saveUserConfig() {
@@ -1530,7 +1522,7 @@ function initApp() {
         updateCounts(); renderAll();
         document.getElementById('last-update').textContent = 'Meta: dari cache · Memuat data terbaru...';
       }
-      fetchAllMetaAccounts(apiConfig.meta.token)
+      fetchAllTokensMeta()
         .then(accounts => {
           if (accounts.length) { cachedMetaAccounts = accounts; fetchAndRenderMeta(accounts); }
         })
@@ -1668,6 +1660,7 @@ function selectPlatform(p) {
 function toggleApiPanel() {
   apiPanelOpen = !apiPanelOpen;
   document.getElementById('api-panel').classList.toggle('open', apiPanelOpen);
+  if (apiPanelOpen) renderMetaTokensList();
 }
 
 async function saveTokenFromArea() {
@@ -1903,14 +1896,107 @@ function loadFonnteConfig() {
   if (jadwalEl) jadwalEl.value = jadwal;
 }
 
+// ── Multi Token Meta ──────────────────────────────────────────────
+let metaTokens = []; // Array of {label, token}
+
+function renderMetaTokensList() {
+  const wrap = document.getElementById('meta-tokens-list');
+  if (!wrap) return;
+  if (!metaTokens.length) {
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:4px 0">Belum ada token. Klik "+ Tambah Token"</div>';
+    return;
+  }
+  wrap.innerHTML = metaTokens.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border2);border-radius:7px;padding:6px 10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:2px">${t.label || 'Token ' + (i+1)}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.token ? t.token.substring(0,30)+'...' : '-'}</div>
+      </div>
+      <button onclick="editMetaToken(${i})" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap">Edit</button>
+      <button onclick="removeMetaToken(${i})" style="font-size:10px;padding:3px 8px;border-radius:5px;border:none;background:var(--red-bg);color:var(--red-text);cursor:pointer">Hapus</button>
+    </div>
+  `).join('');
+}
+
+function addMetaToken() {
+  const label = prompt('Nama/label token (contoh: Herbal Jaya Utama):');
+  if (!label) return;
+  const token = prompt('Paste token Meta API:');
+  if (!token) return;
+  metaTokens.push({ label: label.trim(), token: token.trim() });
+  saveMetaTokens();
+  renderMetaTokensList();
+}
+
+function editMetaToken(i) {
+  const label = prompt('Nama/label token:', metaTokens[i].label);
+  if (label !== null) metaTokens[i].label = label.trim();
+  const token = prompt('Token Meta API (kosongkan untuk tidak ubah):', '');
+  if (token && token.trim()) metaTokens[i].token = token.trim();
+  saveMetaTokens();
+  renderMetaTokensList();
+}
+
+function removeMetaToken(i) {
+  if (!confirm(`Hapus token "${metaTokens[i].label}"?`)) return;
+  metaTokens.splice(i, 1);
+  saveMetaTokens();
+  renderMetaTokensList();
+}
+
+function saveMetaTokens() {
+  if (currentUser) {
+    localStorage.setItem('meta_tokens_' + currentUser.id, JSON.stringify(metaTokens));
+    // Simpan ke Supabase
+    sb.from('user_config').upsert({
+      user_id: currentUser.id,
+      meta_tokens: JSON.stringify(metaTokens),
+      // Tetap simpan token pertama sebagai meta_token utama untuk kompatibilitas
+      meta_token: metaTokens[0]?.token || null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).catch(()=>{});
+    // Update apiConfig dengan token pertama
+    if (metaTokens[0]) apiConfig.meta = { token: metaTokens[0].token, bizId: '' };
+  }
+}
+
+function loadMetaTokens() {
+  if (!currentUser) return;
+  // Load dari localStorage dulu
+  const cached = localStorage.getItem('meta_tokens_' + currentUser.id);
+  if (cached) {
+    try { metaTokens = JSON.parse(cached); } catch(e) { metaTokens = []; }
+  }
+  // Load dari Supabase
+  sb.from('user_config').select('meta_tokens, meta_token').eq('user_id', currentUser.id).single()
+    .then(({ data }) => {
+      if (!data) return;
+      if (data.meta_tokens) {
+        try {
+          const parsed = JSON.parse(data.meta_tokens);
+          if (parsed?.length) {
+            metaTokens = parsed;
+            localStorage.setItem('meta_tokens_' + currentUser.id, JSON.stringify(metaTokens));
+          }
+        } catch(e) {}
+      } else if (data.meta_token && !metaTokens.length) {
+        // Migrasi dari token tunggal ke multi-token
+        metaTokens = [{ label: 'Token Utama', token: data.meta_token }];
+      }
+      renderMetaTokensList();
+      // Set apiConfig dengan token pertama
+      if (metaTokens[0]) apiConfig.meta = { token: metaTokens[0].token, bizId: '' };
+    }).catch(()=>{});
+  renderMetaTokensList();
+}
+
 function saveConfig() {
   apiConfig = {
-    meta: { token: document.getElementById('cfg-meta-token').value, bizId: document.getElementById('cfg-meta-biz').value },
+    meta: { token: metaTokens[0]?.token || document.getElementById('cfg-meta-token')?.value || '', bizId: '' },
     google: { token: document.getElementById('cfg-google-token').value, mccId: document.getElementById('cfg-google-mcc').value },
     tiktok: { token: document.getElementById('cfg-tiktok-token').value, advId: document.getElementById('cfg-tiktok-adv').value },
   };
-  localStorage.setItem('admonitor_config', JSON.stringify(apiConfig));
-  saveUserConfig(); // Sync ke Supabase
+  saveUserConfig();
   updateConnectionStatus();
 }
 
@@ -1966,7 +2052,7 @@ async function testConnections() {
   const results = [];
   if (isConnected('meta')) {
     try {
-      const allAccounts = await fetchAllMetaAccounts(apiConfig.meta.token);
+      const allAccounts = await fetchAllTokensMeta();
       if (allAccounts.length) {
         cachedMetaAccounts = allAccounts;
         results.push(`Meta ✓ (${allAccounts.length} ad account ditemukan)`);
@@ -1989,6 +2075,33 @@ async function testConnections() {
   if (isConnected('tiktok')) results.push('TikTok → via backend');
   if (!results.length) res.textContent = 'Belum ada API yang dikonfigurasi.';
   else res.textContent = results.join(' · ');
+}
+
+// Fetch semua akun dari SEMUA token Meta
+async function fetchAllTokensMeta() {
+  const tokens = metaTokens.length ? metaTokens : 
+    (apiConfig.meta?.token ? [{ label: 'Token Utama', token: apiConfig.meta.token }] : []);
+  
+  if (!tokens.length) return [];
+  
+  const allAccounts = [];
+  const seen = new Set();
+  
+  for (const t of tokens) {
+    if (!t.token) continue;
+    try {
+      const accounts = await fetchAllMetaAccounts(t.token);
+      accounts.forEach(acc => {
+        if (!seen.has(acc.id)) {
+          seen.add(acc.id);
+          allAccounts.push(acc);
+        }
+      });
+    } catch(e) {
+      console.warn(`Token "${t.label}" error:`, e.message);
+    }
+  }
+  return allAccounts;
 }
 
 async function fetchAllMetaAccounts(token) {
