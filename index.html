@@ -1288,7 +1288,12 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
           <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Email Karyawan</label>
           <input id="tim-f-email" type="email" placeholder="email@contoh.com"
             style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Karyawan harus sudah daftar akun dulu di AdMonitor</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Password</label>
+          <input id="tim-f-password" type="password" placeholder="Minimal 6 karakter"
+            style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Password untuk login karyawan. Beritahu karyawan password ini.</div>
         </div>
         <div style="margin-bottom:18px">
           <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Role</label>
@@ -1983,35 +1988,26 @@ function closeTimModal() { document.getElementById('tim-modal').style.display = 
 
 async function saveTim() {
   const email = document.getElementById('tim-f-email').value.trim();
+  const password = document.getElementById('tim-f-password').value.trim();
   const role = document.getElementById('tim-f-role').value;
   const errEl = document.getElementById('tim-modal-err');
   const btn = document.getElementById('tim-modal-btn');
   if (!email) { errEl.textContent = 'Email wajib diisi'; return; }
+  if (!password || password.length < 6) { errEl.textContent = 'Password minimal 6 karakter'; return; }
   btn.disabled = true; btn.textContent = 'Menyimpan...';
 
-  // Cari user_id dari email via Supabase
-  const { data: userData, error: userErr } = await sb.from('user_config')
-    .select('user_id').limit(1);
-  
-  // Cari via auth - gunakan endpoint Vercel
   try {
-    const resp = await fetch('/api/get-user-by-email', {
+    const resp = await fetch('/api/create-team-member', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await sb.auth.getSession()).data.session?.access_token },
-      body: JSON.stringify({ email })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, role, admin_user_id: currentUser.id })
     });
     const result = await resp.json();
-    if (!result.user_id) { errEl.textContent = 'Email tidak ditemukan. Pastikan karyawan sudah daftar di AdMonitor.'; btn.disabled=false; btn.textContent='Tambah'; return; }
-
-    const table = role === 'adv' ? 'adv_users' : 'viewer_users';
-    const { error } = await sb.from(table).upsert({
-      user_id: result.user_id,
-      admin_user_id: currentUser.id,
-      created_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
-
     btn.disabled = false; btn.textContent = 'Tambah';
-    if (error) { errEl.textContent = 'Gagal: ' + error.message; return; }
+
+    if (result.error) { errEl.textContent = 'Gagal: ' + result.error; return; }
+
+    alert(`✅ Karyawan berhasil ditambahkan!\n\nEmail: ${email}\nPassword: ${password}\nRole: ${role.toUpperCase()}\n\nBeritahu karyawan untuk login di monitoringads.vercel.app`);
     closeTimModal();
     loadTimList();
   } catch(e) {
