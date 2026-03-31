@@ -1132,7 +1132,34 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
           <div id="fonnte-status" style="font-size:12px;color:var(--text2);margin-top:10px;font-family:var(--mono)"></div>
           <div style="margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6">
             ⚠️ Agar cron otomatis berjalan, set di <strong>Vercel Environment Variables</strong>:<br>
-            <code>FONNTE_TOKEN</code> · <code>SUPABASE_URL</code> · <code>SUPABASE_SERVICE_KEY</code> · <code>META_TOKEN</code> · <code>CRON_SECRET</code>
+            <code>FONNTE_TOKEN</code> · <code>SUPABASE_URL</code> · <code>SUPABASE_SERVICE_KEY</code> · <code>CRON_SECRET</code>
+          </div>
+        </div>
+
+        <!-- SPV Report -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#4f8ef7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            Laporan SPV (Rekap Semua Akun)
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Kirim rekap semua akun iklan ke satu nomor SPV setiap jadwal.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Nama SPV</label>
+              <input id="cfg-spv-name" type="text" placeholder="Contoh: Pak Alam" oninput="saveSpvConfig()"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Nomor WA SPV</label>
+              <input id="cfg-spv-phone" type="text" placeholder="628123456789" oninput="saveSpvConfig()"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="testKirimWASPV()" style="padding:9px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)">
+              Test Kirim ke SPV
+            </button>
+            <span id="spv-status" style="font-size:12px;color:var(--text2);font-family:var(--mono)"></span>
           </div>
         </div>
 
@@ -1711,6 +1738,89 @@ async function syncLimitsToSupabase() {
   } else {
     result.textContent = `❌ Semua gagal. Cek console untuk detail.`;
     result.style.color = '#f75c5c';
+  }
+}
+
+function saveSpvConfig() {
+  const name = document.getElementById('cfg-spv-name').value.trim();
+  const phone = document.getElementById('cfg-spv-phone').value.trim();
+  if (currentUser) {
+    sb.from('user_config').upsert({
+      user_id: currentUser.id,
+      spv_name: name,
+      spv_phone: phone,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).catch(()=>{});
+  }
+}
+
+function loadSpvConfig() {
+  if (!currentUser) return;
+  sb.from('user_config').select('spv_name,spv_phone').eq('user_id', currentUser.id).single()
+    .then(({ data }) => {
+      if (!data) return;
+      const nameEl = document.getElementById('cfg-spv-name');
+      const phoneEl = document.getElementById('cfg-spv-phone');
+      if (nameEl && data.spv_name) nameEl.value = data.spv_name;
+      if (phoneEl && data.spv_phone) phoneEl.value = data.spv_phone;
+    }).catch(()=>{});
+}
+
+async function testKirimWASPV() {
+  const token = document.getElementById('cfg-fonnte-token').value.trim();
+  const phone = document.getElementById('cfg-spv-phone').value.trim();
+  const name = document.getElementById('cfg-spv-name').value.trim() || 'SPV';
+  const statusEl = document.getElementById('spv-status');
+  if (!token) { statusEl.textContent = '❌ Isi Fonnte Token dulu'; statusEl.style.color='#f75c5c'; return; }
+  if (!phone) { statusEl.textContent = '❌ Isi nomor WA SPV dulu'; statusEl.style.color='#f75c5c'; return; }
+  statusEl.textContent = '⏳ Mengirim...'; statusEl.style.color='var(--text2)';
+
+  // Buat rekap semua akun
+  const now = new Date();
+  const jam = now.getHours().toString().padStart(2,'0') + '.' + now.getMinutes().toString().padStart(2,'0');
+  let pesan = `📋 *Rekap Semua Akun Iklan*\n`;
+  pesan += `🕐 ${jam} WIB | Test dari AdMonitor\n`;
+  pesan += `👔 Halo, *${name}*!\n\n`;
+
+  if (ALL_DATA.length) {
+    // Kelompokkan data per akun
+    let totalSpend = 0, totalHasil = 0;
+    ALL_DATA.forEach(a => {
+      totalSpend += a.spend || 0;
+      totalHasil += a.leads || 0;
+    });
+
+    pesan += `📊 *Ringkasan Semua Akun:*\n`;
+    pesan += `Total Akun: ${ALL_DATA.length}\n`;
+    pesan += `Total Spend: ${fmtRp(totalSpend)}\n`;
+    pesan += `Total Hasil: ${totalHasil}\n`;
+    pesan += `Avg CPR: ${totalHasil > 0 ? fmtRp(Math.round(totalSpend/totalHasil)) : '-'}\n\n`;
+
+    pesan += `📌 *Detail per Akun:*\n`;
+    ALL_DATA.slice(0, 15).forEach(a => {
+      const cpr = (a.leads||0) > 0 ? fmtRp(Math.round(a.spend/a.leads)) : '-';
+      pesan += `▸ *${a.name}*\n`;
+      pesan += `   Spend: ${fmtRp(a.spend)} | Hasil: ${a.leads||0} | CPR: ${cpr}\n`;
+    });
+    if (ALL_DATA.length > 15) pesan += `   ...dan ${ALL_DATA.length-15} akun lainnya\n`;
+  } else {
+    pesan += `_Tidak ada data akun saat ini_\n`;
+  }
+
+  pesan += `\n_AdMonitor · Herbal Jaya_`;
+
+  // Kirim via Vercel endpoint
+  try {
+    const resp = await fetch('/api/test-wa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, target: phone.replace(/\D/g,''), message: pesan, countryCode: '62' })
+    });
+    const r = await resp.json();
+    if (r.status) { statusEl.textContent = '✅ Terkirim ke SPV!'; statusEl.style.color='#22d3a0'; }
+    else { statusEl.textContent = '❌ Gagal: ' + (r.reason||JSON.stringify(r)); statusEl.style.color='#f75c5c'; }
+  } catch(e) {
+    statusEl.textContent = '❌ Error: ' + e.message; statusEl.style.color='#f75c5c';
   }
 }
 
@@ -2839,6 +2949,7 @@ function showView(view) {
     document.getElementById('nav-wa').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadFonnteConfig();
+    loadSpvConfig();
   }
   window.scrollTo(0, 0);
 }
