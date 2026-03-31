@@ -1,16 +1,12 @@
-// api/send-wa.js
-// Vercel Serverless Function — dipanggil oleh cron job
-// Ambil data dari Supabase → analisa kampanye → kirim WA via Fonnte
-
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // service role key (bukan anon)
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
 const META_TOKEN = process.env.META_TOKEN;
 
 module.exports = async function handler(req, res) {
-  // Verifikasi request dari cron Vercel
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const authHeader = req.headers['authorization'];
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -19,18 +15,28 @@ module.exports = async function handler(req, res) {
   try {
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // 1. Ambil semua advertiser + akun mereka
-    const { data: advertisers, error } = await sb
+    // Waktu WIB
+    const now = new Date();
+    const jamWIB = (now.getUTCHours() + 7) % 24;
+    const menit = String(now.getUTCMinutes()).padStart(2,'0');
+    const today = getToday();
+    const tanggalStr = formatTanggal(now);
+    const jamStr = `${String(jamWIB).padStart(2,'0')}.${menit} WIB`;
+
+    // 1. Ambil semua advertiser + akun iklan mereka
+    const { data: advertisers, error: advErr } = await sb
       .from('advertisers')
       .select('*');
 
-    if (error) throw new Error('Supabase error: ' + error.message);
+    if (advErr) throw new Error('Supabase error: ' + advErr.message);
     if (!advertisers?.length) return res.json({ sent: 0, message: 'No advertisers' });
 
+    // 2. Ambil mapping account_id -> nama akun dari Supabase
+    const { data: accData } = await sb.from('ad_accounts').select('ad_account_id, account_name');
+    const accNameMap = {};
+    (accData || []).forEach(a => accNameMap[a.ad_account_id] = a.account_name);
+
     const results = [];
-    const now = new Date();
-    const jam = now.getHours(); // jam lokal server (UTC, perlu +7 untuk WIB)
-    const jamWIB = (jam + 7) % 24;
 
     for (const adv of advertisers) {
       if (!adv.pic_phone) continue;
@@ -38,90 +44,107 @@ module.exports = async function handler(req, res) {
       const accounts = JSON.parse(adv.accounts || '[]');
       if (!accounts.length) continue;
 
-      // 2. Fetch insights per akun dari Meta API
-      const today = getToday();
-      const messages = [];
+      // 3. Fetch kampanye per akun
+      const akunReports = [];
 
       for (const accId of accounts) {
         try {
-          // Fetch kampanye + insights hari ini
           const campRes = await fetch(
             `https://graph.facebook.com/v19.0/${accId}/campaigns?` +
             `access_token=${META_TOKEN}&` +
-            `fields=id,name,status,insights{spend,actions,cpm,cpc}&` +
+            `fields=id,name,status,insights{spend,actions,impressions,clicks}&` +
             `time_range={"since":"${today}","until":"${today}"}&` +
-            `limit=10`
+            `filtering=[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED"]}]&` +
+            `limit=20`
           );
           const campData = await campRes.json();
           if (campData.error || !campData.data?.length) continue;
 
-          // Analisa kampanye
+          const namaAkun = accNameMap[accId] || accId;
           const scale = [];
           const kill = [];
+          const semua = [];
 
           for (const camp of campData.data) {
-            if (camp.status !== 'ACTIVE') continue;
             const ins = camp.insights?.data?.[0];
-            if (!ins) continue;
-
-            const spend = parseFloat(ins.spend || 0);
-            const leads = (ins.actions || []).find(a =>
-              ['web_in_store_purchase','omni_purchase','lead'].includes(a.action_type)
-            );
-            const hasil = parseInt(leads?.value || 0);
+            const spend = ins ? parseFloat(ins.spend || 0) : 0;
+            const hasil = ins ? parseInt((ins.actions || []).find(a =>
+              ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','lead','onsite_conversion.lead_grouped'].includes(a.action_type)
+            )?.value || 0) : 0;
             const cpr = hasil > 0 ? Math.round(spend / hasil) : 0;
+            const impresi = ins ? parseInt(ins.impressions || 0) : 0;
+            const klik = ins ? parseInt(ins.clicks || 0) : 0;
+            const status = camp.status === 'ACTIVE' ? 'Aktif' : 'Paused';
 
-            // Logika sederhana: CPR bagus = scale, tidak ada hasil = kill
-            if (hasil > 0 && cpr > 0 && cpr < 100000) {
-              scale.push({ name: camp.name, spend: fmtRp(spend), hasil, cpr: fmtRp(cpr) });
-            } else if (spend > 50000 && hasil === 0) {
-              kill.push({ name: camp.name, spend: fmtRp(spend) });
-            }
+            const info = { name: camp.name, spend, hasil, cpr, impresi, klik, status };
+            semua.push(info);
+
+            if (spend > 0 && hasil > 0 && cpr < 150000) scale.push(info);
+            else if (spend > 50000 && hasil === 0) kill.push(info);
           }
 
-          if (scale.length || kill.length) {
-            // Ambil nama akun dari Supabase
-            const { data: accData } = await sb
-              .from('ad_accounts')
-              .select('account_name')
-              .eq('ad_account_id', accId)
-              .single();
-
-            const accName = accData?.account_name || accId;
-            let msg = `📊 *Update Iklan - ${accName}*\n`;
-            msg += `🕐 ${formatJam(jamWIB)} WIB, ${formatTanggal(now)}\n\n`;
-
-            if (scale.length) {
-              msg += `✅ *SCALE (Performa Bagus):*\n`;
-              scale.forEach(c => {
-                msg += `▸ ${c.name}\n  Spend: ${c.spend} | Hasil: ${c.hasil} | CPR: ${c.cpr}\n`;
-              });
-              msg += '\n';
-            }
-
-            if (kill.length) {
-              msg += `❌ *KILL (Tidak Ada Hasil):*\n`;
-              kill.forEach(c => {
-                msg += `▸ ${c.name}\n  Spend: ${c.spend} | Hasil: 0\n`;
-              });
-            }
-
-            messages.push(msg);
+          if (semua.length > 0) {
+            akunReports.push({ namaAkun, scale, kill, semua });
           }
+
         } catch (e) {
           console.error('Error fetch account', accId, e.message);
         }
       }
 
-      // 3. Kirim WA via Fonnte
-      if (messages.length) {
-        const fullMessage = messages.join('\n─────────────────\n');
-        const waResult = await kirimWA(adv.pic_phone, fullMessage);
-        results.push({ advertiser: adv.name, phone: adv.pic_phone, status: waResult });
+      if (!akunReports.length) continue;
+
+      // 4. Susun pesan WA
+      let pesan = `📊 *Laporan Iklan*\n`;
+      pesan += `🕐 ${jamStr} | ${tanggalStr}\n`;
+      pesan += `👤 Halo, *${adv.name}*!\n\n`;
+
+      for (const akun of akunReports) {
+        pesan += `━━━━━━━━━━━━━━━━\n`;
+        pesan += `🏢 *${akun.namaAkun}*\n`;
+        pesan += `━━━━━━━━━━━━━━━━\n\n`;
+
+        if (akun.scale.length > 0) {
+          pesan += `✅ *PERFORMA BAGUS (Scale):*\n`;
+          akun.scale.forEach(c => {
+            pesan += `▸ *${c.name}*\n`;
+            pesan += `   Spend: ${fmtRp(c.spend)}\n`;
+            pesan += `   Hasil: ${c.hasil} | CPR: ${fmtRp(c.cpr)}\n`;
+            pesan += `   Impresi: ${fmtNum(c.impresi)} | Klik: ${fmtNum(c.klik)}\n\n`;
+          });
+        }
+
+        if (akun.kill.length > 0) {
+          pesan += `❌ *TIDAK ADA HASIL (Kill):*\n`;
+          akun.kill.forEach(c => {
+            pesan += `▸ *${c.name}*\n`;
+            pesan += `   Spend: ${fmtRp(c.spend)} | Hasil: 0\n\n`;
+          });
+        }
+
+        // Kampanye aktif lain yang tidak masuk scale/kill
+        const lainnya = akun.semua.filter(c => 
+          !akun.scale.find(s => s.name === c.name) && 
+          !akun.kill.find(k => k.name === c.name) &&
+          c.spend > 0
+        );
+        if (lainnya.length > 0) {
+          pesan += `📌 *Lainnya:*\n`;
+          lainnya.forEach(c => {
+            pesan += `▸ ${c.name} (${c.status})\n`;
+            pesan += `   Spend: ${fmtRp(c.spend)} | Hasil: ${c.hasil}\n\n`;
+          });
+        }
       }
+
+      pesan += `_Powered by AdMonitor_`;
+
+      // 5. Kirim WA
+      const waResult = await kirimWA(adv.pic_phone, pesan);
+      results.push({ advertiser: adv.name, phone: adv.pic_phone, status: waResult });
     }
 
-    // 4. Log ke Supabase
+    // 6. Log ke Supabase
     try {
       await sb.from('wa_logs').insert({
         sent_at: new Date().toISOString(),
@@ -129,7 +152,7 @@ module.exports = async function handler(req, res) {
         total_sent: results.length,
         detail: JSON.stringify(results)
       });
-    } catch(logErr) { console.log('wa_logs skip:', logErr.message); }
+    } catch(e) { console.log('wa_logs skip:', e.message); }
 
     return res.json({ success: true, sent: results.length, results, jamWIB });
 
@@ -144,18 +167,11 @@ async function kirimWA(nomor, pesan) {
     const phone = nomor.replace(/\D/g, '');
     const resp = await fetch('https://api.fonnte.com/send', {
       method: 'POST',
-      headers: {
-        'Authorization': FONNTE_TOKEN,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        target: phone,
-        message: pesan,
-        countryCode: '62'
-      })
+      headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: phone, message: pesan, countryCode: '62' })
     });
     const result = await resp.json();
-    return result.status ? 'sent' : ('failed: ' + result.reason);
+    return result.status ? 'sent' : ('failed: ' + (result.reason || JSON.stringify(result)));
   } catch (e) {
     return 'error: ' + e.message;
   }
@@ -163,20 +179,21 @@ async function kirimWA(nomor, pesan) {
 
 function getToday() {
   const d = new Date();
-  d.setHours(d.getHours() + 7); // UTC ke WIB
+  d.setUTCHours(d.getUTCHours() + 7);
   return d.toISOString().split('T')[0];
-}
-
-function formatJam(h) {
-  return String(h).padStart(2, '0') + '.00';
 }
 
 function formatTanggal(d) {
   const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
   const bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-  return `${hari[d.getDay()]}, ${d.getDate()} ${bln[d.getMonth()]} ${d.getFullYear()}`;
+  const wib = new Date(d.getTime() + 7*3600000);
+  return `${hari[wib.getUTCDay()]}, ${wib.getUTCDate()} ${bln[wib.getUTCMonth()]} ${wib.getUTCFullYear()}`;
 }
 
 function fmtRp(n) {
   return 'Rp' + Math.round(n).toLocaleString('id-ID');
+}
+
+function fmtNum(n) {
+  return parseInt(n).toLocaleString('id-ID');
 }
