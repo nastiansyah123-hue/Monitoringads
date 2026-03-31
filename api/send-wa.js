@@ -13,26 +13,37 @@ module.exports = async function handler(req, res) {
 
   try {
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const now = new Date();
-    const jamWIB = (now.getUTCHours() + 7) % 24;
-    const menit = String(now.getUTCMinutes()).padStart(2,'0');
-    const today = getToday();
-    const tanggalStr = formatTanggal(now);
-    const jamStr = `${String(jamWIB).padStart(2,'0')}.${menit} WIB`;
 
-    // 1. Fetch semua nama akun dari Meta API sekaligus
+    // Waktu WIB sekarang
+    const now = new Date();
+    const wibOffset = 7 * 60 * 60 * 1000;
+    const nowWIB = new Date(now.getTime() + wibOffset);
+
+    const jamWIB = nowWIB.getUTCHours();
+    const menitWIB = String(nowWIB.getUTCMinutes()).padStart(2,'0');
+    const jamStr = `${String(jamWIB).padStart(2,'0')}.${menitWIB} WIB`;
+
+    // Tanggal hari ini WIB format YYYY-MM-DD
+    const y = nowWIB.getUTCFullYear();
+    const m = String(nowWIB.getUTCMonth()+1).padStart(2,'0');
+    const d = String(nowWIB.getUTCDate()).padStart(2,'0');
+    const today = `${y}-${m}-${d}`;
+
+    const tanggalStr = formatTanggal(nowWIB);
+
+    console.log(`Running at WIB: ${jamStr}, date: ${today}`);
+
+    // 1. Ambil nama akun dari Meta API
     const metaAccRes = await fetch(
       `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${META_TOKEN}&fields=id,name&limit=50`
     );
     const metaAccData = await metaAccRes.json();
-    
-    // Buat map: act_xxx -> nama akun
     const accNameMap = {};
     (metaAccData.data || []).forEach(a => {
-      accNameMap[a.id] = a.name; // a.id sudah format act_xxx
+      accNameMap[a.id] = a.name;
     });
 
-    // 2. Ambil advertisers dari Supabase
+    // 2. Ambil advertisers
     const { data: advertisers, error: advErr } = await sb.from('advertisers').select('*');
     if (advErr) throw new Error('Supabase error: ' + advErr.message);
     if (!advertisers?.length) return res.json({ sent: 0, message: 'No advertisers' });
@@ -48,14 +59,13 @@ module.exports = async function handler(req, res) {
 
       for (const accId of accounts) {
         try {
-          // Nama akun dari Meta API
-          const namaAkun = accNameMap[accId] || accNameMap['act_'+accId.replace('act_','')] || accId;
+          const namaAkun = accNameMap[accId] || accId;
 
-          // Fetch kampanye AKTIF dengan spend hari ini
+          // Fetch kampanye AKTIF dengan insights HARI INI SAJA
+          // date_preset=today memastikan data dari jam 00.00 sampai sekarang
           const url = `https://graph.facebook.com/v19.0/${accId}/campaigns` +
             `?access_token=${META_TOKEN}` +
-            `&fields=id,name,status,insights{spend,actions,impressions,clicks}` +
-            `&time_range={"since":"${today}","until":"${today}"}` +
+            `&fields=id,name,status,insights.date_preset(today){spend,actions,impressions,clicks}` +
             `&filtering=[{"field":"effective_status","operator":"IN","value":["ACTIVE"]}]` +
             `&limit=30`;
 
@@ -68,8 +78,9 @@ module.exports = async function handler(req, res) {
           for (const camp of campData.data) {
             const ins = camp.insights?.data?.[0];
             if (!ins) continue;
+
             const spend = parseFloat(ins.spend || 0);
-            if (spend <= 0) continue; // skip belum spend hari ini
+            if (spend <= 0) continue; // skip yang belum ada spend hari ini
 
             const hasil = parseInt((ins.actions || []).find(a =>
               ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase',
@@ -82,12 +93,13 @@ module.exports = async function handler(req, res) {
 
             if (hasil > 0 && cpr < 150000) scale.push(info);
             else if (spend > 50000 && hasil === 0) kill.push(info);
-            else if (spend > 0) pantau.push(info);
+            else pantau.push(info);
           }
 
           if (scale.length || kill.length || pantau.length) {
             akunReports.push({ namaAkun, scale, kill, pantau });
           }
+
         } catch (e) {
           console.error('Error', accId, e.message);
         }
@@ -95,10 +107,11 @@ module.exports = async function handler(req, res) {
 
       if (!akunReports.length) continue;
 
-      // Susun pesan WA
+      // Susun pesan
       let pesan = `📊 *Laporan Iklan Hari Ini*\n`;
       pesan += `🕐 ${jamStr} | ${tanggalStr}\n`;
       pesan += `👤 Halo, *${adv.pic_name || adv.name}*!\n`;
+      pesan += `_(Data dari jam 00.00 s/d ${jamStr})_\n`;
 
       for (const akun of akunReports) {
         pesan += `\n━━━━━━━━━━━━━━━━\n`;
@@ -170,16 +183,9 @@ async function kirimWA(nomor, pesan) {
   }
 }
 
-function getToday() {
-  const d = new Date();
-  d.setTime(d.getTime() + 7 * 3600 * 1000);
-  return d.toISOString().split('T')[0];
-}
-
-function formatTanggal(d) {
+function formatTanggal(wib) {
   const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
   const bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-  const wib = new Date(d.getTime() + 7 * 3600000);
   return `${hari[wib.getUTCDay()]}, ${wib.getUTCDate()} ${bln[wib.getUTCMonth()]} ${wib.getUTCFullYear()}`;
 }
 
