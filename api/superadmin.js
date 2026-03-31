@@ -1,8 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -14,109 +11,85 @@ module.exports = async function handler(req, res) {
   if (!user_id) return res.status(400).json({ error: 'user_id required' });
 
   try {
-    // Pakai service key untuk bypass RLS
-    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-    // Verifikasi bahwa user ini memang super admin
-    const { data: saCheck } = await sb
-      .from('super_admins')
-      .select('user_id')
-      .eq('user_id', user_id)
-      .single();
-
+    // Verifikasi super admin
+    const { data: saCheck } = await sb.from('super_admins').select('user_id').eq('user_id', user_id).single();
     if (!saCheck) return res.status(403).json({ error: 'Bukan super admin' });
 
-    // Ambil semua user config beserta token Meta
-    const { data: configs } = await sb
-      .from('user_config')
-      .select('user_id, meta_token, meta_tokens');
-
+    // Ambil semua user config
+    const { data: configs } = await sb.from('user_config').select('user_id, meta_token, meta_tokens');
     if (!configs?.length) return res.json({ admins: [] });
 
-    const today = getTodayWIB();
-    const results = [];
-
-    for (const cfg of configs) {
-      if (!cfg.meta_token && !cfg.meta_tokens) continue;
-
-      // Ambil semua token (multi-token support)
+    // Proses semua admin PARALEL
+    const results = await Promise.all(configs.map(async (cfg) => {
+      // Kumpulkan token
       let tokens = [];
       if (cfg.meta_tokens) {
         try { tokens = JSON.parse(cfg.meta_tokens).map(t => t.token).filter(Boolean); } catch(e) {}
       }
       if (!tokens.length && cfg.meta_token) tokens = [cfg.meta_token];
-      if (!tokens.length) continue;
+      if (!tokens.length) return null;
 
-      const adminAccounts = [];
       const seenIds = new Set();
+      const allAccounts = [];
 
-      for (const token of tokens) {
+      // Fetch semua token PARALEL
+      await Promise.all(tokens.map(async (token) => {
         try {
-          // Fetch nama akun
+          // Fetch akun + insights dalam 1 request
           const accRes = await fetch(
-            `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name&limit=50`
+            `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}` +
+            `&fields=id,name,insights.date_preset(today){spend,actions,impressions,clicks}` +
+            `&limit=50`
           );
           const accData = await accRes.json();
-          if (accData.error) continue;
+          if (accData.error) return;
 
-          // Fetch insights hari ini per akun
           for (const acc of (accData.data || [])) {
             if (seenIds.has(acc.id)) continue;
             seenIds.add(acc.id);
 
-            try {
-              const insRes = await fetch(
-                `https://graph.facebook.com/v19.0/${acc.id}/insights?` +
-                `access_token=${token}&` +
-                `date_preset=today&` +
-                `fields=spend,actions,impressions,clicks&` +
-                `level=account`
-              );
-              const insData = await insRes.json();
-              const ins = insData.data?.[0];
-              const spend = parseFloat(ins?.spend || 0);
-              const hasil = parseInt((ins?.actions || []).find(a =>
-                ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase',
-                 'lead','onsite_conversion.lead_grouped'].includes(a.action_type)
-              )?.value || 0);
+            const ins = acc.insights?.data?.[0];
+            const spend = parseFloat(ins?.spend || 0);
+            const hasil = parseInt((ins?.actions || []).find(a =>
+              ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase',
+               'lead','onsite_conversion.lead_grouped'].includes(a.action_type)
+            )?.value || 0);
 
-              adminAccounts.push({
-                id: acc.id,
-                name: acc.name,
-                spend,
-                hasil,
-                cpr: hasil > 0 ? Math.round(spend / hasil) : 0,
-                impresi: parseInt(ins?.impressions || 0),
-                klik: parseInt(ins?.clicks || 0)
-              });
-            } catch(e) {
-              adminAccounts.push({ id: acc.id, name: acc.name, spend: 0, hasil: 0, cpr: 0 });
-            }
+            allAccounts.push({
+              id: acc.id,
+              name: acc.name,
+              spend,
+              hasil,
+              cpr: hasil > 0 ? Math.round(spend / hasil) : 0,
+              impresi: parseInt(ins?.impressions || 0),
+              klik: parseInt(ins?.clicks || 0)
+            });
           }
-        } catch(e) { continue; }
-      }
+        } catch(e) {}
+      }));
 
-      if (adminAccounts.length) {
-        results.push({
-          userId: cfg.user_id,
-          accounts: adminAccounts,
-          totalSpend: adminAccounts.reduce((s,a) => s+a.spend, 0),
-          totalHasil: adminAccounts.reduce((s,a) => s+a.hasil, 0),
-          jumlahAkun: adminAccounts.length
-        });
-      }
-    }
+      if (!allAccounts.length) return null;
 
-    return res.json({ admins: results, today });
+      const totalSpend = allAccounts.reduce((s,a) => s+a.spend, 0);
+      const totalHasil = allAccounts.reduce((s,a) => s+a.hasil, 0);
+
+      return {
+        userId: cfg.user_id,
+        accounts: allAccounts.sort((a,b) => b.spend - a.spend),
+        totalSpend,
+        totalHasil,
+        avgCPR: totalHasil > 0 ? Math.round(totalSpend/totalHasil) : 0,
+        jumlahAkun: allAccounts.length
+      };
+    }));
+
+    const filtered = results.filter(Boolean);
+    return res.json({ admins: filtered });
 
   } catch(e) {
     console.error(e);
     return res.status(500).json({ error: e.message });
   }
 };
-
-function getTodayWIB() {
-  const d = new Date();
-  d.setTime(d.getTime() + 7 * 3600 * 1000);
-  return d.toISOString().split('T')[0];
-}
