@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
     // 1. Ambil semua user config (token Meta + info SPV)
     const { data: userConfigs, error: ucErr } = await sb
       .from('user_config')
-      .select('user_id, meta_token, spv_name, spv_phone');
+      .select('user_id, meta_token, spv_name, spv_phone, wa_jadwal');
 
     if (ucErr) throw new Error('user_config error: ' + ucErr.message);
     if (!userConfigs?.length) return res.json({ sent: 0, message: 'No user configs' });
@@ -38,6 +38,17 @@ module.exports = async function handler(req, res) {
     // 2. Proses per admin
     for (const uc of userConfigs) {
       if (!uc.meta_token) continue;
+
+      // Cek apakah jam sekarang ada di jadwal user ini
+      const jadwalUser = (uc.wa_jadwal || '9,14,18,21')
+        .split(',').map(j => parseInt(j.trim())).filter(j => !isNaN(j));
+      
+      if (!jadwalUser.includes(jamWIB)) {
+        console.log(`User ${uc.user_id}: jam ${jamWIB} bukan jadwal (${jadwalUser.join(',')}), skip`);
+        continue; // Skip user ini kalau bukan waktunya
+      }
+
+      console.log(`User ${uc.user_id}: jam ${jamWIB} sesuai jadwal, kirim WA...`);
 
       const META_TOKEN = uc.meta_token;
 
@@ -96,7 +107,7 @@ module.exports = async function handler(req, res) {
 
               const hasil = parseInt((ins.actions || []).find(a =>
                 ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase',
-                 'lead','onsite_conversion.lead_grouped'].includes(a.action_type)
+                 'lead','onsite_conversion.lead_grouped','onsite_conversion.messaging_first_reply','onsite_conversion.messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_user_depth_2_message_send'].includes(a.action_type)
               )?.value || 0);
               const cpr = hasil > 0 ? Math.round(spend / hasil) : 0;
               const impresi = parseInt(ins.impressions || 0);
