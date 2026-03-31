@@ -2149,26 +2149,22 @@ async function initADV(adminUserId) {
   document.getElementById('welcome-screen').classList.add('hidden');
   document.getElementById('app-layout').style.display = 'flex';
 
-  // Badge Finance di sidebar
-  const sidebarFooter = document.querySelector('.sidebar-footer');
-  if (sidebarFooter) {
-    const badge = document.createElement('div');
-    badge.innerHTML = `<div style="padding:8px 12px;background:rgba(34,211,160,0.15);border-radius:8px;margin-bottom:8px;font-size:11px;color:#22d3a0;font-weight:600;text-align:center">📋 ADV</div>`;
-    sidebarFooter.prepend(badge);
+  // Sembunyikan sidebar normal sepenuhnya
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    // Sembunyikan semua nav item
+    sidebar.querySelectorAll('.nav-item, .nav-label, .nav-section').forEach(el => el.style.display = 'none');
+    
+    // Badge ADV
+    const sidebarFooter = document.querySelector('.sidebar-footer');
+    if (sidebarFooter) {
+      const badge = document.createElement('div');
+      badge.innerHTML = `<div style="padding:8px 12px;background:rgba(79,142,247,0.15);border-radius:8px;margin-bottom:8px;font-size:11px;color:#4f8ef7;font-weight:600;text-align:center">📋 ADV</div>`;
+      sidebarFooter.prepend(badge);
+    }
   }
 
-  // Tambah menu Finance di sidebar
-  const navSection = document.querySelector('.nav-section');
-  if (navSection) {
-    const btn = document.createElement('button');
-    btn.className = 'nav-item active';
-    btn.id = 'nav-adv';
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg> ADV`;
-    btn.onclick = () => showView('finance');
-    navSection.prepend(btn);
-  }
-
-  showView('finance');
+  showView('adv');
   await advLoadAccounts();
 }
 
@@ -2250,28 +2246,72 @@ async function advLoadAccounts() {
 
       return `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div style="font-size:13px;font-weight:600">${acc.name}</div>
-            <div style="display:flex;gap:8px">
-              <button onclick="advEditLimit('${acc.id}')" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-family:var(--sans)">Edit Limit</button>
-              ${lim ? `<button onclick="advCatatBayar('${acc.id}')" style="font-size:11px;padding:4px 12px;border-radius:6px;border:none;background:#22d3a0;color:white;cursor:pointer;font-family:var(--sans)">✓ Catat Bayar</button>` : ''}
+          <!-- Header -->
+          <div style="font-size:14px;font-weight:600;margin-bottom:12px">${acc.name}</div>
+          
+          <!-- Stats -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+            <div style="background:var(--surface2);border-radius:8px;padding:10px">
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tertunggak</div>
+              <div style="font-size:14px;font-weight:600;color:#f5a623">${lim?fmtRp(tertunggak):'-'}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px">
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Limit</div>
+              <div style="font-size:14px;font-weight:600">${limit>0?fmtRp(limit):'-'}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px">
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Sisa</div>
+              <div style="font-size:14px;font-weight:600;color:${barColor}">${limit>0?fmtRp(sisa):'-'}</div>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${limit>0?'12px':'0'}">
-            <div><div style="font-size:10px;color:var(--text3)">Limit</div><div style="font-size:12px;font-weight:500;font-family:var(--mono)">${limit>0?fmtRp(limit):'-'}</div></div>
-            <div><div style="font-size:10px;color:var(--text3)">Saldo Awal</div><div style="font-size:12px;font-weight:500;font-family:var(--mono)">${lim?fmtRp(lim.saldo_awal||0):'-'}</div></div>
-            <div><div style="font-size:10px;color:var(--text3)">Tertunggak</div><div style="font-size:12px;font-weight:500;font-family:var(--mono);color:#f5a623">${lim?fmtRp(tertunggak):'-'}</div></div>
-            <div><div style="font-size:10px;color:var(--text3)">Sisa</div><div style="font-size:12px;font-weight:500;font-family:var(--mono);color:${barColor}">${limit>0?fmtRp(sisa):'-'}</div></div>
-          </div>
+
           ${limit>0?`
-          <div>
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
-              <span>${pct}% terpakai</span><span>Spend hari ini: ${fmtRp(acc.spend)}</span>
+          <!-- Progress bar -->
+          <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px">
+              <span>${pct}% terpakai</span>
+              <span>Spend hari ini: ${fmtRp(acc.spend)}</span>
             </div>
-            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px"></div>
+            <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px"></div>
             </div>
-          </div>` : '<div style="font-size:11px;color:var(--text3)">Limit belum diset</div>'}
+          </div>` : ''}
+
+          <!-- Form Edit Limit inline -->
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+            <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Edit Limit & Saldo</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+              <div>
+                <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Limit (Rp)</label>
+                <input id="adv-limit-${acc.id}" type="number" value="${limit||''}" placeholder="0"
+                  style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--mono);box-sizing:border-box">
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Saldo Awal (Rp)</label>
+                <input id="adv-saldo-${acc.id}" type="number" value="${lim?.saldo_awal||''}" placeholder="0"
+                  style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--mono);box-sizing:border-box">
+              </div>
+            </div>
+            <button onclick="advSaveLimit('${acc.id}',${acc.spend})"
+              style="width:100%;padding:8px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans);margin-bottom:8px">
+              💾 Simpan Limit
+            </button>
+          </div>
+
+          <!-- Catat Bayar inline -->
+          ${limit>0?`
+          <div style="border-top:1px solid var(--border);padding-top:12px">
+            <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Catat Pembayaran</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="adv-bayar-${acc.id}" type="number" placeholder="Jumlah bayar (Rp)"
+                style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--mono);box-sizing:border-box">
+              <button onclick="advSaveBayar('${acc.id}',${tertunggak},${acc.spend},${limit})"
+                style="padding:8px 16px;border-radius:8px;border:none;background:#22d3a0;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans);white-space:nowrap">
+                ✓ Catat
+              </button>
+            </div>
+            <div id="adv-bayar-status-${acc.id}" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+          </div>` : ''}
         </div>
       `;
     }).join('') || '<div style="padding:40px;text-align:center;color:var(--text2)">Tidak ada akun</div>';
@@ -2281,52 +2321,43 @@ async function advLoadAccounts() {
   }
 }
 
-async function advEditLimit(accId) {
-  const acc = advAccounts.find(a => a.id === accId);
-  if (!acc) return;
-  const lim = acc.lim;
-  const limitVal = prompt(`Limit akun "${acc.name}" (Rp):`, lim?.limit_amount || '');
-  if (!limitVal) return;
-  const saldoVal = prompt('Saldo awal / tagihan belum dibayar (Rp):', lim?.saldo_awal || '0');
-  if (saldoVal === null) return;
+async function advSaveLimit(accId, currentSpend) {
+  const limitVal = parseFloat(document.getElementById('adv-limit-'+accId)?.value || 0);
+  const saldoVal = parseFloat(document.getElementById('adv-saldo-'+accId)?.value || 0);
+  if (!limitVal || limitVal <= 0) { alert('Limit wajib diisi'); return; }
 
   const { error } = await sb.from('account_limits').upsert({
     user_id: advAdminId,
     account_id: accId,
-    limit_amount: parseFloat(limitVal),
-    saldo_awal: parseFloat(saldoVal),
-    spend_saat_set: acc.spend,
+    limit_amount: limitVal,
+    saldo_awal: saldoVal,
+    spend_saat_set: currentSpend,
     updated_at: new Date().toISOString()
   }, { onConflict: 'user_id,account_id' });
 
-  if (error) { alert('Gagal simpan: ' + error.message); return; }
-  alert('Limit tersimpan!');
+  if (error) { alert('Gagal: ' + error.message); return; }
   advLoadAccounts();
 }
 
-async function advCatatBayar(accId) {
-  const acc = advAccounts.find(a => a.id === accId);
-  if (!acc || !acc.lim) return;
-  const bayar = prompt(`Jumlah pembayaran untuk "${acc.name}" (Rp):`);
-  if (!bayar || parseFloat(bayar) <= 0) return;
+async function advSaveBayar(accId, tertunggak, currentSpend, limit) {
+  const bayar = parseFloat(document.getElementById('adv-bayar-'+accId)?.value || 0);
+  const statusEl = document.getElementById('adv-bayar-status-'+accId);
+  if (!bayar || bayar <= 0) { if(statusEl) statusEl.textContent = '❌ Isi jumlah bayar'; return; }
 
-  const jumlah = parseFloat(bayar);
-  const spendSejak = Math.max(0, acc.spend - (acc.lim.spend_saat_set||0));
-  const tertunggakSkrg = (acc.lim.saldo_awal||0) + spendSejak;
-  const sisaSetelahBayar = Math.max(0, tertunggakSkrg - jumlah);
+  const sisaSetelahBayar = Math.max(0, tertunggak - bayar);
 
   const { error } = await sb.from('account_limits').upsert({
     user_id: advAdminId,
     account_id: accId,
-    limit_amount: acc.lim.limit_amount,
+    limit_amount: limit,
     saldo_awal: sisaSetelahBayar,
-    spend_saat_set: acc.spend,
+    spend_saat_set: currentSpend,
     updated_at: new Date().toISOString()
   }, { onConflict: 'user_id,account_id' });
 
-  if (error) { alert('Gagal simpan: ' + error.message); return; }
-  alert(`Pembayaran ${fmtRp(jumlah)} tercatat! Sisa tagihan: ${fmtRp(sisaSetelahBayar)}`);
-  advLoadAccounts();
+  if (error) { if(statusEl) statusEl.textContent = '❌ Gagal: ' + error.message; return; }
+  if(statusEl) { statusEl.textContent = `✅ Bayar ${fmtRp(bayar)} tercatat!`; statusEl.style.color='#22d3a0'; }
+  setTimeout(() => advLoadAccounts(), 1000);
 }
 
 async function advRefresh() { await advLoadAccounts(); }
@@ -4085,6 +4116,9 @@ function showView(view) {
     if (navEl) navEl.classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadTimList();
+  } else if (view === 'adv') {
+    document.getElementById('view-adv').style.display = 'block';
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
   } else if (view === 'finance') {
     document.getElementById('view-adv').style.display = 'block';
     const navEl = document.getElementById('nav-adv');
