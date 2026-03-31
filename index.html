@@ -1194,6 +1194,26 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       </div>
     </div>
 
+    <!-- View: Super Admin -->
+    <div id="view-superadmin" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div>
+          <h1 style="font-size:17px;font-weight:600">👑 Super Admin View</h1>
+          <p style="font-size:11px;color:var(--text2);margin-top:2px">Monitoring semua admin secara bersamaan</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="sa-filter-admin" onchange="saFilterAdmin()" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--sans)">
+            <option value="all">Semua Admin</option>
+          </select>
+          <button onclick="saRefresh()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;font-family:var(--sans)">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="padding:22px 28px">
+        <div id="sa-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+        <div id="sa-admins-list"></div>
+      </div>
+    </div>
+
 <!-- /main -->
 </div><!-- /app-layout -->
 
@@ -1350,8 +1370,18 @@ async function doLogin() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('login-error').textContent = '';
   btn.disabled = false; btn.textContent = 'Masuk';
-  await loadUserConfig();
-  initApp();
+
+  // Cek apakah super admin
+  const { data: saData } = await sb.from('super_admins')
+    .select('user_id').eq('user_id', currentUser.id).single();
+  
+  if (saData) {
+    currentUser.isSuperAdmin = true;
+    await initSuperAdmin();
+  } else {
+    await loadUserConfig();
+    initApp();
+  }
 }
 
 async function doForgotPassword() {
@@ -1820,6 +1850,209 @@ async function testKirimWASPV() {
 }
 
 // ── Fonnte WA Config ─────────────────────────────────────────────
+// ── Super Admin ───────────────────────────────────────────────────
+let saAdminsData = []; // Data semua admin
+
+async function initSuperAdmin() {
+  // Tampilkan layout tapi tanpa sidebar normal
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('app-layout').style.display = 'flex';
+
+  // Sembunyikan sidebar normal, tampilkan badge super admin
+  const sidebarFooter = document.querySelector('.sidebar-footer');
+  if (sidebarFooter) {
+    const badge = document.createElement('div');
+    badge.innerHTML = `<div style="padding:8px 12px;background:rgba(255,215,0,0.15);border-radius:8px;margin-bottom:8px;font-size:11px;color:#f5a623;font-weight:600;text-align:center">👑 SUPER ADMIN</div>`;
+    sidebarFooter.prepend(badge);
+  }
+
+  // Tambah menu Super Admin di sidebar
+  const navSection = document.querySelector('.nav-section');
+  if (navSection) {
+    const btn = document.createElement('button');
+    btn.className = 'nav-item active';
+    btn.id = 'nav-superadmin';
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg> Super Admin`;
+    btn.onclick = () => showView('superadmin');
+    navSection.prepend(btn);
+  }
+
+  showView('superadmin');
+  await saLoadAllAdmins();
+}
+
+async function saLoadAllAdmins() {
+  const listEl = document.getElementById('sa-admins-list');
+  const summaryEl = document.getElementById('sa-summary');
+  if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat data semua admin...</div>';
+
+  const sb2 = supabase.createClient(
+    'https://ibokbgpnmwthmbfdvyxt.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlib2tiZ3BubXd0aG1iZmR2eXh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTgwMzQsImV4cCI6MjA5MDQzNDAzNH0.Df-6kvafuO-nQViUX6Tww-F3P9oRQpod9DtVADP88QM'
+  );
+
+  // Ambil semua user config
+  const { data: configs } = await sb2.from('user_config').select('user_id, meta_token');
+  if (!configs?.length) {
+    listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Tidak ada admin terdaftar</div>';
+    return;
+  }
+
+  saAdminsData = [];
+  const today = getTodayLocal();
+
+  // Update filter dropdown
+  const filterSel = document.getElementById('sa-filter-admin');
+  if (filterSel) {
+    filterSel.innerHTML = '<option value="all">Semua Admin</option>';
+  }
+
+  // Fetch data per admin paralel
+  const promises = configs.map(async (cfg, idx) => {
+    if (!cfg.meta_token) return null;
+    try {
+      // Fetch akun iklan dari Meta
+      const accRes = await fetch(
+        `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${cfg.meta_token}&fields=id,name,account_status,insights.date_preset(today){spend,actions}&limit=50`
+      );
+      const accData = await accRes.json();
+      if (accData.error) return null;
+
+      const accounts = (accData.data || []).map(acc => {
+        const ins = acc.insights?.data?.[0];
+        const spend = parseFloat(ins?.spend || 0);
+        const hasil = parseInt((ins?.actions || []).find(a =>
+          ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','lead'].includes(a.action_type)
+        )?.value || 0);
+        return { id: acc.id, name: acc.name, spend, hasil, cpr: hasil > 0 ? Math.round(spend/hasil) : 0 };
+      });
+
+      const totalSpend = accounts.reduce((s,a) => s+a.spend, 0);
+      const totalHasil = accounts.reduce((s,a) => s+a.hasil, 0);
+
+      return {
+        userId: cfg.user_id,
+        label: `Admin ${idx+1}`,
+        accounts,
+        totalSpend,
+        totalHasil,
+        avgCPR: totalHasil > 0 ? Math.round(totalSpend/totalHasil) : 0,
+        jumlahAkun: accounts.length
+      };
+    } catch(e) { return null; }
+  });
+
+  const results = (await Promise.all(promises)).filter(Boolean);
+  saAdminsData = results;
+
+  // Update dropdown filter
+  results.forEach((admin, i) => {
+    if (filterSel) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = admin.label + ` (${admin.jumlahAkun} akun)`;
+      filterSel.appendChild(opt);
+    }
+  });
+
+  renderSuperAdminView(results);
+}
+
+function renderSuperAdminView(admins) {
+  const summaryEl = document.getElementById('sa-summary');
+  const listEl = document.getElementById('sa-admins-list');
+
+  const totalSpend = admins.reduce((s,a) => s+a.totalSpend, 0);
+  const totalHasil = admins.reduce((s,a) => s+a.totalHasil, 0);
+  const totalAkun = admins.reduce((s,a) => s+a.jumlahAkun, 0);
+  const avgCPR = totalHasil > 0 ? Math.round(totalSpend/totalHasil) : 0;
+
+  // Summary cards
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="mc"><div class="mc-label">Total Admin</div><div class="mc-val">${admins.length}</div><div style="font-size:11px;color:var(--text2);margin-top:4px">${totalAkun} akun iklan</div></div>
+      <div class="mc"><div class="mc-label">Total Spend Hari Ini</div><div class="mc-val" style="font-size:18px">${fmtRp(totalSpend)}</div></div>
+      <div class="mc"><div class="mc-label">Total Hasil</div><div class="mc-val">${totalHasil.toLocaleString('id-ID')}</div><div style="font-size:11px;color:var(--text2);margin-top:4px">total purchase/lead</div></div>
+      <div class="mc"><div class="mc-label">Avg CPR</div><div class="mc-val" style="font-size:18px">${totalHasil > 0 ? fmtRp(avgCPR) : '–'}</div></div>
+    `;
+  }
+
+  if (!listEl) return;
+  if (!admins.length) {
+    listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Tidak ada data</div>';
+    return;
+  }
+
+  listEl.innerHTML = admins.map((admin, i) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden">
+      <!-- Header admin -->
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:white">${i+1}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">${admin.label}</div>
+            <div style="font-size:11px;color:var(--text2)">${admin.jumlahAkun} akun iklan</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px">
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text3)">Spend Hari Ini</div>
+            <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${fmtRp(admin.totalSpend)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text3)">Hasil</div>
+            <div style="font-size:13px;font-weight:600">${admin.totalHasil}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text3)">CPR</div>
+            <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${admin.avgCPR > 0 ? fmtRp(admin.avgCPR) : '–'}</div>
+          </div>
+        </div>
+      </div>
+      <!-- Tabel akun -->
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--surface2)">
+              <th style="text-align:left;padding:8px 16px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Akun Iklan</th>
+              <th style="text-align:right;padding:8px 16px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Spend</th>
+              <th style="text-align:right;padding:8px 16px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Hasil</th>
+              <th style="text-align:right;padding:8px 16px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">CPR</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${admin.accounts.length ? admin.accounts.sort((a,b)=>b.spend-a.spend).map(acc => `
+              <tr>
+                <td style="padding:9px 16px;border-top:1px solid var(--border);font-size:12px;font-weight:500">${acc.name}</td>
+                <td style="padding:9px 16px;border-top:1px solid var(--border);font-size:12px;text-align:right;font-family:var(--mono)">${fmtRp(acc.spend)}</td>
+                <td style="padding:9px 16px;border-top:1px solid var(--border);font-size:12px;text-align:right">${acc.hasil}</td>
+                <td style="padding:9px 16px;border-top:1px solid var(--border);font-size:12px;text-align:right;font-family:var(--mono)">${acc.hasil > 0 ? fmtRp(acc.cpr) : '–'}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Tidak ada spend hari ini</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `).join('');
+}
+
+function saFilterAdmin() {
+  const val = document.getElementById('sa-filter-admin').value;
+  if (val === 'all') renderSuperAdminView(saAdminsData);
+  else renderSuperAdminView([saAdminsData[parseInt(val)]]);
+}
+
+async function saRefresh() {
+  await saLoadAllAdmins();
+}
+
+function getTodayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── Jadwal Grid ───────────────────────────────────────────────────
 function renderJadwalGrid() {
   const grid = document.getElementById('jadwal-grid');
   if (!grid) return;
@@ -3096,7 +3329,7 @@ function backToWelcome() {
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
   localStorage.setItem('admonitor_last_view', view);
-  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa'].forEach(id => {
+  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa','view-superadmin'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -3139,6 +3372,11 @@ function showView(view) {
     loadFonnteConfig();
     loadSpvConfig();
     renderJadwalGrid();
+  } else if (view === 'superadmin') {
+    document.getElementById('view-superadmin').style.display = 'block';
+    const navEl = document.getElementById('nav-superadmin');
+    if (navEl) navEl.classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
   }
   window.scrollTo(0, 0);
 }
