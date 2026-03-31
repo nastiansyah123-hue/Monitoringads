@@ -122,12 +122,14 @@ module.exports = async function handler(req, res) {
     }
 
     // 4. Log ke Supabase
-    await sb.from('wa_logs').insert({
-      sent_at: new Date().toISOString(),
-      jam_wib: jamWIB,
-      total_sent: results.length,
-      detail: JSON.stringify(results)
-    }).catch(() => {});
+    try {
+      await sb.from('wa_logs').insert({
+        sent_at: new Date().toISOString(),
+        jam_wib: jamWIB,
+        total_sent: results.length,
+        detail: JSON.stringify(results)
+      });
+    } catch(logErr) { console.log('wa_logs skip:', logErr.message); }
 
     return res.json({ success: true, sent: results.length, results, jamWIB });
 
