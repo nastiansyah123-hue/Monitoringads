@@ -2333,13 +2333,21 @@ async function advSaveLimit(accId, currentSpend) {
   });
   const r = await resp.json();
   if (r.error) { alert('Gagal: ' + r.error); return; }
-  advLoadAccounts();
+
+  // Update lokal langsung
+  const acc = advAccounts.find(a => a.id === accId);
+  if (acc) {
+    acc.lim = { limit_amount: limitVal, saldo_awal: saldoVal, spend_saat_set: currentSpend };
+  }
+
+  alert('✅ Limit tersimpan!');
+  advLoadAccounts(); // Reload untuk update progress bar
 }
 
 async function advSaveBayar(accId, tertunggak, currentSpend, limit) {
   const bayar = parseFloat(document.getElementById('adv-bayar-'+accId)?.value || 0);
   const statusEl = document.getElementById('adv-bayar-status-'+accId);
-  if (!bayar || bayar <= 0) { if(statusEl) statusEl.textContent = '❌ Isi jumlah bayar'; return; }
+  if (!bayar || bayar <= 0) { if(statusEl) { statusEl.textContent = '❌ Isi jumlah bayar'; statusEl.style.color='#f75c5c'; } return; }
 
   const sisaSetelahBayar = Math.max(0, tertunggak - bayar);
 
@@ -2350,8 +2358,21 @@ async function advSaveBayar(accId, tertunggak, currentSpend, limit) {
   });
   const r = await resp.json();
   if (r.error) { if(statusEl) { statusEl.textContent = '❌ Gagal: ' + r.error; statusEl.style.color='#f75c5c'; } return; }
-  if(statusEl) { statusEl.textContent = `✅ Bayar ${fmtRp(bayar)} tercatat!`; statusEl.style.color='#22d3a0'; }
-  setTimeout(() => advLoadAccounts(), 1000);
+
+  // Update lokal langsung tanpa reload ke Meta API
+  const acc = advAccounts.find(a => a.id === accId);
+  if (acc) {
+    acc.lim = acc.lim || {};
+    acc.lim.saldo_awal = sisaSetelahBayar;
+    acc.lim.spend_saat_set = currentSpend;
+    acc.lim.limit_amount = limit;
+  }
+
+  if(statusEl) { statusEl.textContent = `✅ Bayar ${fmtRp(bayar)} tercatat! Sisa: ${fmtRp(sisaSetelahBayar)}`; statusEl.style.color='#22d3a0'; }
+  
+  // Kosongkan input
+  const inputEl = document.getElementById('adv-bayar-'+accId);
+  if (inputEl) inputEl.value = '';
 }
 
 async function advRefresh() { await advLoadAccounts(); }
