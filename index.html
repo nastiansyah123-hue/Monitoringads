@@ -978,9 +978,34 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <button onclick="openAdvModal()" style="padding:7px 16px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)">+ Tambah Advertiser</button>
       </div>
       <div style="padding:22px 28px">
+      <div style="padding:22px 28px">
+        <!-- Card SPV -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#4f8ef7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            Informasi SPV
+            <span style="font-size:11px;color:var(--text3);font-weight:400">— penerima laporan & notif budget</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:flex-end">
+            <div>
+              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Nama SPV</label>
+              <input id="cfg-spv-name" type="text" placeholder="Contoh: Pak Alam" oninput="saveSpvConfig()"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Nomor WA SPV</label>
+              <input id="cfg-spv-phone" type="text" placeholder="628123456789" oninput="saveSpvConfig()"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <button onclick="testKirimWASPV()" style="padding:9px 16px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans);white-space:nowrap">
+                Test WA ke SPV
+              </button>
+              <span id="spv-status" style="font-size:11px;color:var(--text2);font-family:var(--mono);text-align:center"></span>
+            </div>
+          </div>
+        </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
-            <div style="font-size:13px;font-weight:600">Daftar Advertiser</div>
             <input type="text" id="search-adv" placeholder="Cari..." oninput="filterAdv()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;width:180px;font-family:var(--sans)">
           </div>
           <div style="overflow-x:auto">
@@ -1137,33 +1162,6 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
             ⚠️ Agar cron otomatis berjalan, set di <strong>Vercel Environment Variables</strong>:<br>
             <code>FONNTE_TOKEN</code> · <code>SUPABASE_URL</code> · <code>SUPABASE_SERVICE_KEY</code> · <code>CRON_SECRET</code><br><br>
             <div id="jadwal-vercel-info" style="color:var(--text2)"></div>
-          </div>
-        </div>
-
-        <!-- SPV Report -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px">
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#4f8ef7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            Laporan SPV (Rekap Semua Akun)
-          </div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Kirim rekap semua akun iklan ke satu nomor SPV setiap jadwal.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-            <div>
-              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Nama SPV</label>
-              <input id="cfg-spv-name" type="text" placeholder="Contoh: Pak Alam" oninput="saveSpvConfig()"
-                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--sans);box-sizing:border-box">
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Nomor WA SPV</label>
-              <input id="cfg-spv-phone" type="text" placeholder="628123456789" oninput="saveSpvConfig()"
-                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13px;font-family:var(--mono);box-sizing:border-box">
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="testKirimWASPV()" style="padding:9px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)">
-              Test Kirim ke SPV
-            </button>
-            <span id="spv-status" style="font-size:12px;color:var(--text2);font-family:var(--mono)"></span>
           </div>
         </div>
 
@@ -3410,6 +3408,7 @@ function showView(view) {
     document.getElementById('nav-advertisers').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadAdvList();
+    loadSpvConfig();
   } else if (view === 'adaccounts') {
     var accEl = document.getElementById('view-adaccounts'); if(accEl){accEl.style.cssText='display:block!important;min-height:100%;width:100%;';} // v1774914136
     document.getElementById('nav-adaccounts').classList.add('active');
@@ -3420,7 +3419,6 @@ function showView(view) {
     document.getElementById('nav-wa').classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadFonnteConfig();
-    loadSpvConfig();
     renderJadwalGrid();
   } else if (view === 'superadmin') {
     document.getElementById('view-superadmin').style.display = 'block';
