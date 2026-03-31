@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { user_id } = req.body;
+  const { user_id, since, until, preset } = req.body;
   if (!user_id) return res.status(400).json({ error: 'user_id required' });
 
   try {
@@ -17,13 +17,27 @@ module.exports = async function handler(req, res) {
     const { data: saCheck } = await sb.from('super_admins').select('user_id').eq('user_id', user_id).single();
     if (!saCheck) return res.status(403).json({ error: 'Bukan super admin' });
 
+    // Tentukan date range
+    const todayWIB = getTodayWIB();
+    const sinceDate = since || todayWIB;
+    const untilDate = until || todayWIB;
+
+    // Tentukan Meta date_preset atau time_range
+    let dateParam = '';
+    if (preset === 'today') {
+      dateParam = `date_preset=today`;
+    } else if (preset === 'yesterday') {
+      dateParam = `date_preset=yesterday`;
+    } else {
+      dateParam = `time_range={"since":"${sinceDate}","until":"${untilDate}"}`;
+    }
+
     // Ambil semua user config
     const { data: configs } = await sb.from('user_config').select('user_id, meta_token, meta_tokens');
     if (!configs?.length) return res.json({ admins: [] });
 
     // Proses semua admin PARALEL
     const results = await Promise.all(configs.map(async (cfg) => {
-      // Kumpulkan token
       let tokens = [];
       if (cfg.meta_tokens) {
         try { tokens = JSON.parse(cfg.meta_tokens).map(t => t.token).filter(Boolean); } catch(e) {}
@@ -34,13 +48,11 @@ module.exports = async function handler(req, res) {
       const seenIds = new Set();
       const allAccounts = [];
 
-      // Fetch semua token PARALEL
       await Promise.all(tokens.map(async (token) => {
         try {
-          // Fetch akun + insights dalam 1 request
           const accRes = await fetch(
             `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}` +
-            `&fields=id,name,insights.date_preset(today){spend,actions,impressions,clicks}` +
+            `&fields=id,name,insights.${dateParam}{spend,actions,impressions,clicks}` +
             `&limit=50`
           );
           const accData = await accRes.json();
@@ -85,11 +97,16 @@ module.exports = async function handler(req, res) {
       };
     }));
 
-    const filtered = results.filter(Boolean);
-    return res.json({ admins: filtered });
+    return res.json({ admins: results.filter(Boolean), since: sinceDate, until: untilDate });
 
   } catch(e) {
     console.error(e);
     return res.status(500).json({ error: e.message });
   }
 };
+
+function getTodayWIB() {
+  const d = new Date();
+  d.setTime(d.getTime() + 7 * 3600 * 1000);
+  return d.toISOString().split('T')[0];
+}
