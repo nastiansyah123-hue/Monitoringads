@@ -28,8 +28,8 @@ module.exports = async function handler(req, res) {
     const allAdvertisers = advertisersRes.data || [];
     const sentToday = new Set((logsRes.data || []).map(l => `${l.account_id}_${l.alert_type}`));
 
-    if (!allLimits.length) return res.json({ alerts: 0, reason: 'no limits set' });
-    if (!allConfigs.length) return res.json({ alerts: 0, reason: 'no user configs' });
+    if (!allLimits.length) return res.json({ alerts: 0, reason: 'no limits set', limitsCount: 0 });
+    if (!allConfigs.length) return res.json({ alerts: 0, reason: 'no user configs', limitsCount: allLimits.length, limitUserIds: allLimits.map(l=>l.user_id) });
 
     const allAlerts = [];
 
@@ -116,7 +116,17 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    return res.json({ success: true, alerts: allAlerts.length, detail: allAlerts });
+    return res.json({ 
+      success: true, 
+      alerts: allAlerts.length, 
+      detail: allAlerts,
+      debug: {
+        configsCount: allConfigs.length,
+        limitsCount: allLimits.length,
+        configUserIds: allConfigs.map(c=>c.user_id),
+        limitUserIds: [...new Set(allLimits.map(l=>l.user_id))]
+      }
+    });
 
   } catch(e) {
     return res.status(500).json({ error: e.message });
