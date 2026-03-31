@@ -1,21 +1,39 @@
-name: Send WA Auto
+name: AdMonitor Auto WA
 
 on:
   schedule:
-    - cron: '0 0 * * *'    # 07.00 WIB (UTC+7)
-    - cron: '0 4 * * *'    # 11.00 WIB
-    - cron: '0 8 * * *'    # 15.00 WIB
-    - cron: '30 11 * * *'  # 18.30 WIB
-    - cron: '30 14 * * *'  # 21.30 WIB
+    - cron: '0 0 * * *'    # 07.00 WIB - Laporan rutin
+    - cron: '0 4 * * *'    # 11.00 WIB - Laporan rutin
+    - cron: '0 8 * * *'    # 15.00 WIB - Laporan rutin
+    - cron: '30 11 * * *'  # 18.30 WIB - Laporan rutin
+    - cron: '30 14 * * *'  # 21.30 WIB - Laporan rutin
+    - cron: '0 * * * *'    # Setiap jam - Cek budget alert
   workflow_dispatch:
 
 jobs:
-  send:
+  send-laporan:
+    if: |
+      github.event.schedule == '0 0 * * *' ||
+      github.event.schedule == '0 4 * * *' ||
+      github.event.schedule == '0 8 * * *' ||
+      github.event.schedule == '30 11 * * *' ||
+      github.event.schedule == '30 14 * * *' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger send-wa endpoint
+      - name: Kirim laporan rutin
         run: |
           RESPONSE=$(curl -s -X POST https://monitoringads.vercel.app/api/send-wa \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
-          echo "Response: $RESPONSE"
+          echo "Laporan: $RESPONSE"
+
+  check-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cek budget alert
+        run: |
+          RESPONSE=$(curl -s -X POST https://monitoringads.vercel.app/api/check-budget \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "Budget alert: $RESPONSE"
