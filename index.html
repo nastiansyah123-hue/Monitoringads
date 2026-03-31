@@ -2622,7 +2622,12 @@ async function fetchAndRenderMeta(adAccounts) {
         'onsite_conversion.total_messaging_connection',
         'onsite_conversion.messaging_user_depth_2_message_send',
       ];
-      const hasilAction = actions.find(a => hasilTypes.includes(a.action_type));
+      // Cari berdasarkan PRIORITAS hasilTypes, bukan urutan actions dari Meta
+      let hasilAction = null;
+      for (const ht of hasilTypes) {
+        const found = actions.find(a => a.action_type === ht);
+        if (found) { hasilAction = found; break; }
+      }
       const leads = parseInt(hasilAction?.value || 0);
       const hasilType = hasilAction?.action_type || '';
       const cpr = leads > 0 ? Math.round(spend / leads) : 0;
