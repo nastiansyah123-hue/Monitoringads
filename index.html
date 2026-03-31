@@ -2347,19 +2347,15 @@ async function advSaveLimit(accId, currentSpend) {
 async function advSaveBayar(accId, tertunggak, currentSpend, limit) {
   const bayar = parseFloat(document.getElementById('adv-bayar-'+accId)?.value || 0);
   const statusEl = document.getElementById('adv-bayar-status-'+accId);
-  if (!bayar || bayar <= 0) { if(statusEl) { statusEl.textContent = '❌ Isi jumlah bayar'; statusEl.style.color='#f75c5c'; } return; }
+  const btn = document.querySelector(`button[onclick*="advSaveBayar('${accId}"]`);
+  
+  if (!bayar || bayar <= 0) { 
+    if(statusEl) { statusEl.textContent = '❌ Isi jumlah bayar'; statusEl.style.color='#f75c5c'; } 
+    return; 
+  }
 
+  // Optimistic update — langsung update UI dulu
   const sisaSetelahBayar = Math.max(0, tertunggak - bayar);
-
-  const resp = await fetch('/api/save-limit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ member_id: currentUser.id, admin_user_id: advAdminId, account_id: accId, limit_amount: limit, saldo_awal: sisaSetelahBayar, spend_saat_set: currentSpend })
-  });
-  const r = await resp.json();
-  if (r.error) { if(statusEl) { statusEl.textContent = '❌ Gagal: ' + r.error; statusEl.style.color='#f75c5c'; } return; }
-
-  // Update lokal langsung tanpa reload ke Meta API
   const acc = advAccounts.find(a => a.id === accId);
   if (acc) {
     acc.lim = acc.lim || {};
@@ -2369,10 +2365,19 @@ async function advSaveBayar(accId, tertunggak, currentSpend, limit) {
   }
 
   if(statusEl) { statusEl.textContent = `✅ Bayar ${fmtRp(bayar)} tercatat! Sisa: ${fmtRp(sisaSetelahBayar)}`; statusEl.style.color='#22d3a0'; }
-  
-  // Kosongkan input
   const inputEl = document.getElementById('adv-bayar-'+accId);
   if (inputEl) inputEl.value = '';
+
+  // Simpan ke server di background (tidak tunggu)
+  fetch('/api/save-limit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ member_id: currentUser.id, admin_user_id: advAdminId, account_id: accId, limit_amount: limit, saldo_awal: sisaSetelahBayar, spend_saat_set: currentSpend })
+  }).then(r => r.json()).then(r => {
+    if (r.error && statusEl) { statusEl.textContent = '❌ Gagal simpan: ' + r.error; statusEl.style.color='#f75c5c'; }
+  }).catch(e => {
+    if (statusEl) { statusEl.textContent = '⚠️ Tersimpan lokal, gagal sync: ' + e.message; }
+  });
 }
 
 async function advRefresh() { await advLoadAccounts(); }
