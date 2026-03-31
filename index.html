@@ -1085,6 +1085,20 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       </div>
     </div>
 
+    <!-- Modal Detail Advertiser -->
+    <div id="adv-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+      <div style="background:var(--surface);border-radius:12px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+          <div>
+            <div id="adv-detail-title" style="font-size:15px;font-weight:600"></div>
+            <div id="adv-detail-sub" style="font-size:11px;color:var(--text2);margin-top:2px"></div>
+          </div>
+          <button onclick="document.getElementById('adv-detail-modal').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;padding:4px">✕</button>
+        </div>
+        <div id="adv-detail-body" style="padding:20px"></div>
+      </div>
+    </div>
+
     <!-- Modal Ad Account -->
     <div id="acc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px">
       <div style="background:var(--surface);border-radius:12px;padding:24px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
@@ -3216,6 +3230,87 @@ async function saveAdv() {
   loadAdvList();
 }
 
+async function openAdvDetail(advId) {
+  const adv = window._advData[advId];
+  if (!adv) return;
+
+  const modal = document.getElementById('adv-detail-modal');
+  const body = document.getElementById('adv-detail-body');
+  const title = document.getElementById('adv-detail-title');
+  const sub = document.getElementById('adv-detail-sub');
+
+  title.textContent = adv.name;
+  sub.textContent = `PIC: ${adv.pic_name || '-'} · ${adv.pic_phone || '-'}`;
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2)">Memuat data akun...</div>';
+  modal.style.display = 'flex';
+
+  const accounts = JSON.parse(adv.accounts || '[]');
+  if (!accounts.length) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">Belum ada akun iklan terhubung</div>';
+    return;
+  }
+
+  // Ambil data dari ALL_DATA
+  const accData = accounts.map(accId => {
+    const found = ALL_DATA.find(a => a.id === accId);
+    const lim = manualLimits[accId];
+    return { id: accId, name: found?.name || accId, spend: found?.spend || 0, leads: found?.leads || 0, cpr: found?.cpr || 0, imp: found?.imp || 0, lim };
+  });
+
+  const totalSpend = accData.reduce((s,a) => s+a.spend, 0);
+  const totalLeads = accData.reduce((s,a) => s+a.leads, 0);
+
+  body.innerHTML = `
+    <!-- Summary -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+      <div class="mc"><div class="mc-label">Total Akun</div><div class="mc-val">${accData.length}</div></div>
+      <div class="mc"><div class="mc-label">Total Spend</div><div class="mc-val" style="font-size:16px">${fmtRp(totalSpend)}</div></div>
+      <div class="mc"><div class="mc-label">Total Hasil</div><div class="mc-val">${totalLeads} <span style="font-size:11px;color:var(--text2)">| CPR ${totalLeads>0?fmtRp(Math.round(totalSpend/totalLeads)):'–'}</span></div></div>
+    </div>
+
+    <!-- Per akun -->
+    ${accData.map(acc => {
+      const lim = acc.lim;
+      const pct = lim?.limit > 0 ? Math.min(100, Math.round(((lim.saldoAwal + Math.max(0, acc.spend - lim.spendSaatSet)) / lim.limit) * 100)) : 0;
+      const sisa = lim?.limit > 0 ? Math.max(0, lim.limit - (lim.saldoAwal + Math.max(0, acc.spend - lim.spendSaatSet))) : 0;
+      const barColor = pct >= 90 ? '#f75c5c' : pct >= 70 ? '#f5a623' : '#22d3a0';
+
+      return `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:600">${acc.name}</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${acc.id}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:${lim?.limit>0?'10px':'0'}">
+            <div>
+              <div style="font-size:10px;color:var(--text3)">Spend Hari Ini</div>
+              <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${fmtRp(acc.spend)}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text3)">Hasil</div>
+              <div style="font-size:13px;font-weight:600">${acc.leads}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text3)">CPR</div>
+              <div style="font-size:13px;font-weight:600;font-family:var(--mono)">${acc.leads>0?fmtRp(acc.cpr):'–'}</div>
+            </div>
+          </div>
+          ${lim?.limit > 0 ? `
+          <div style="margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px">
+              <span>Budget: ${fmtRp(lim.limit)}</span>
+              <span>Sisa: <strong style="color:${barColor}">${fmtRp(sisa)}</strong> (${100-pct}%)</span>
+            </div>
+            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .3s"></div>
+            </div>
+          </div>` : ''}
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
 async function loadAdvList() {
   const tbody = document.getElementById('adv-tbody');
   if (!tbody) return;
@@ -3243,7 +3338,13 @@ async function loadAdvList() {
       `<span style="font-size:10px;padding:2px 8px;border-radius:100px;background:var(--meta-bg);color:var(--meta-text);white-space:nowrap">${a.name}</span>`
     ).join('');
     return `<tr>
-      <td style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:500">${d.name}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div onclick="openAdvDetail('${d.id}')" style="font-weight:500;cursor:pointer;color:#4f8ef7;display:flex;align-items:center;gap:6px">
+          ${d.name}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#4f8ef7" style="flex-shrink:0"><path d="M9 5l7 7-7 7"/></svg>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${accounts.length} akun iklan</div>
+      </td>
       <td style="padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text2)">${d.pic_name||'-'}</td>
       <td style="padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px">
         ${d.pic_phone ? `<a href="https://wa.me/${d.pic_phone.replace(/\D/g,'')}" target="_blank" style="color:#22d3a0;text-decoration:none">${d.pic_phone}</a>` : '-'}
