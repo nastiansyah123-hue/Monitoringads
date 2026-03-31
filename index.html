@@ -1244,6 +1244,21 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
       </div>
     </div>
 
+    <!-- View: Finance -->
+    <div id="view-adv" style="display:none;min-height:100vh;background:var(--bg)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div>
+          <h1 style="font-size:17px;font-weight:600">📋 ADV View</h1>
+          <p style="font-size:11px;color:var(--text2);margin-top:2px">Kelola limit & pembayaran akun iklan</p>
+        </div>
+        <button onclick="advRefresh()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;font-family:var(--sans)">↻ Refresh</button>
+      </div>
+      <div style="padding:22px 28px">
+        <div id="finance-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px"></div>
+        <div id="finance-accounts-list"></div>
+      </div>
+    </div>
+
 <!-- /main -->
 </div><!-- /app-layout -->
 
@@ -1413,6 +1428,14 @@ async function doLogin() {
     }
   } catch(e) {
     console.warn('Super admin check failed:', e.message);
+  }
+
+  // Cek finance role
+  const financeData = await checkADVRole(currentUser.id);
+  if (financeData) {
+    currentUser.isADV = true;
+    await initADV(financeData.admin_user_id);
+    return;
   }
 
   // Login normal
@@ -1889,7 +1912,204 @@ async function testKirimWASPV() {
 }
 
 // ── Fonnte WA Config ─────────────────────────────────────────────
-// ── Super Admin ───────────────────────────────────────────────────
+// ── Finance Role ─────────────────────────────────────────────────
+let advAdminId = null;
+let advAccounts = [];
+
+async function checkADVRole(userId) {
+  try {
+    const { data, error } = await sb.from('adv_users')
+      .select('user_id, admin_user_id')
+      .eq('user_id', userId).single();
+    if (!error && data) return data;
+  } catch(e) {}
+  return null;
+}
+
+async function initADV(adminUserId) {
+  advAdminId = adminUserId;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('app-layout').style.display = 'flex';
+
+  // Badge Finance di sidebar
+  const sidebarFooter = document.querySelector('.sidebar-footer');
+  if (sidebarFooter) {
+    const badge = document.createElement('div');
+    badge.innerHTML = `<div style="padding:8px 12px;background:rgba(34,211,160,0.15);border-radius:8px;margin-bottom:8px;font-size:11px;color:#22d3a0;font-weight:600;text-align:center">📋 ADV</div>`;
+    sidebarFooter.prepend(badge);
+  }
+
+  // Tambah menu Finance di sidebar
+  const navSection = document.querySelector('.nav-section');
+  if (navSection) {
+    const btn = document.createElement('button');
+    btn.className = 'nav-item active';
+    btn.id = 'nav-adv';
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg> ADV`;
+    btn.onclick = () => showView('finance');
+    navSection.prepend(btn);
+  }
+
+  showView('finance');
+  await advLoadAccounts();
+}
+
+async function advLoadAccounts() {
+  const listEl = document.getElementById('finance-accounts-list');
+  const summaryEl = document.getElementById('finance-summary');
+  if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">Memuat data akun...</div>';
+
+  if (!advAdminId) return;
+
+  try {
+    // Ambil token Meta admin yang di-assign
+    const { data: ucData } = await sb.from('user_config')
+      .select('meta_token, meta_tokens')
+      .eq('user_id', advAdminId).single();
+
+    if (!ucData?.meta_token) {
+      listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Admin belum set token Meta</div>';
+      return;
+    }
+
+    // Ambil semua akun Meta
+    let tokens = [];
+    if (ucData.meta_tokens) {
+      try { tokens = JSON.parse(ucData.meta_tokens).map(t=>t.token).filter(Boolean); } catch(e){}
+    }
+    if (!tokens.length && ucData.meta_token) tokens = [ucData.meta_token];
+
+    const allAccounts = [];
+    const seen = new Set();
+    for (const token of tokens) {
+      const r = await fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name,insights.date_preset(today){spend}&limit=50`);
+      const d = await r.json();
+      if (d.error) continue;
+      for (const acc of (d.data||[])) {
+        if (seen.has(acc.id)) continue;
+        seen.add(acc.id);
+        const spend = parseFloat(acc.insights?.data?.[0]?.spend || 0);
+        allAccounts.push({ id: acc.id, name: acc.name, spend });
+      }
+    }
+
+    // Ambil limits
+    const { data: limits } = await sb.from('account_limits')
+      .select('*').eq('user_id', advAdminId);
+    const limMap = {};
+    (limits||[]).forEach(l => limMap[l.account_id] = l);
+
+    advAccounts = allAccounts.map(acc => ({ ...acc, lim: limMap[acc.id] || null }));
+
+    // Summary
+    const totalLimit = advAccounts.reduce((s,a) => s+(a.lim?.limit_amount||0), 0);
+    const totalTertunggak = advAccounts.reduce((s,a) => {
+      if (!a.lim?.limit_amount) return s;
+      const spendSejak = Math.max(0, a.spend - (a.lim.spend_saat_set||0));
+      return s + (a.lim.saldo_awal||0) + spendSejak;
+    }, 0);
+    const totalSisa = Math.max(0, totalLimit - totalTertunggak);
+
+    if (summaryEl) summaryEl.innerHTML = `
+      <div class="mc"><div class="mc-label">Total Limit</div><div class="mc-val" style="font-size:16px">${fmtRp(totalLimit)}</div></div>
+      <div class="mc"><div class="mc-label">Total Tertunggak</div><div class="mc-val" style="font-size:16px;color:#f5a623">${fmtRp(totalTertunggak)}</div></div>
+      <div class="mc"><div class="mc-label">Total Sisa</div><div class="mc-val" style="font-size:16px;color:#22d3a0">${fmtRp(totalSisa)}</div></div>
+    `;
+
+    // Render akun
+    if (!listEl) return;
+    listEl.innerHTML = advAccounts.map(acc => {
+      const lim = acc.lim;
+      const spendSejak = lim ? Math.max(0, acc.spend - (lim.spend_saat_set||0)) : 0;
+      const tertunggak = lim ? (lim.saldo_awal||0) + spendSejak : 0;
+      const limit = lim?.limit_amount || 0;
+      const sisa = limit > 0 ? Math.max(0, limit - tertunggak) : 0;
+      const pct = limit > 0 ? Math.min(100, Math.round(tertunggak/limit*100)) : 0;
+      const barColor = pct>=90?'#f75c5c':pct>=70?'#f5a623':'#22d3a0';
+
+      return `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div style="font-size:13px;font-weight:600">${acc.name}</div>
+            <div style="display:flex;gap:8px">
+              <button onclick="advEditLimit('${acc.id}')" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-family:var(--sans)">Edit Limit</button>
+              ${lim ? `<button onclick="advCatatBayar('${acc.id}')" style="font-size:11px;padding:4px 12px;border-radius:6px;border:none;background:#22d3a0;color:white;cursor:pointer;font-family:var(--sans)">✓ Catat Bayar</button>` : ''}
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${limit>0?'12px':'0'}">
+            <div><div style="font-size:10px;color:var(--text3)">Limit</div><div style="font-size:12px;font-weight:500;font-family:var(--mono)">${limit>0?fmtRp(limit):'-'}</div></div>
+            <div><div style="font-size:10px;color:var(--text3)">Saldo Awal</div><div style="font-size:12px;font-weight:500;font-family:var(--mono)">${lim?fmtRp(lim.saldo_awal||0):'-'}</div></div>
+            <div><div style="font-size:10px;color:var(--text3)">Tertunggak</div><div style="font-size:12px;font-weight:500;font-family:var(--mono);color:#f5a623">${lim?fmtRp(tertunggak):'-'}</div></div>
+            <div><div style="font-size:10px;color:var(--text3)">Sisa</div><div style="font-size:12px;font-weight:500;font-family:var(--mono);color:${barColor}">${limit>0?fmtRp(sisa):'-'}</div></div>
+          </div>
+          ${limit>0?`
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
+              <span>${pct}% terpakai</span><span>Spend hari ini: ${fmtRp(acc.spend)}</span>
+            </div>
+            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px"></div>
+            </div>
+          </div>` : '<div style="font-size:11px;color:var(--text3)">Limit belum diset</div>'}
+        </div>
+      `;
+    }).join('') || '<div style="padding:40px;text-align:center;color:var(--text2)">Tidak ada akun</div>';
+
+  } catch(e) {
+    if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:#f75c5c">Error: ${e.message}</div>`;
+  }
+}
+
+async function advEditLimit(accId) {
+  const acc = advAccounts.find(a => a.id === accId);
+  if (!acc) return;
+  const lim = acc.lim;
+  const limitVal = prompt(`Limit akun "${acc.name}" (Rp):`, lim?.limit_amount || '');
+  if (!limitVal) return;
+  const saldoVal = prompt('Saldo awal / tagihan belum dibayar (Rp):', lim?.saldo_awal || '0');
+  if (saldoVal === null) return;
+
+  const { error } = await sb.from('account_limits').upsert({
+    user_id: advAdminId,
+    account_id: accId,
+    limit_amount: parseFloat(limitVal),
+    saldo_awal: parseFloat(saldoVal),
+    spend_saat_set: acc.spend,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id,account_id' });
+
+  if (error) { alert('Gagal simpan: ' + error.message); return; }
+  alert('Limit tersimpan!');
+  advLoadAccounts();
+}
+
+async function advCatatBayar(accId) {
+  const acc = advAccounts.find(a => a.id === accId);
+  if (!acc || !acc.lim) return;
+  const bayar = prompt(`Jumlah pembayaran untuk "${acc.name}" (Rp):`);
+  if (!bayar || parseFloat(bayar) <= 0) return;
+
+  const jumlah = parseFloat(bayar);
+  const spendSejak = Math.max(0, acc.spend - (acc.lim.spend_saat_set||0));
+  const tertunggakSkrg = (acc.lim.saldo_awal||0) + spendSejak;
+  const sisaSetelahBayar = Math.max(0, tertunggakSkrg - jumlah);
+
+  const { error } = await sb.from('account_limits').upsert({
+    user_id: advAdminId,
+    account_id: accId,
+    limit_amount: acc.lim.limit_amount,
+    saldo_awal: sisaSetelahBayar,
+    spend_saat_set: acc.spend,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id,account_id' });
+
+  if (error) { alert('Gagal simpan: ' + error.message); return; }
+  alert(`Pembayaran ${fmtRp(jumlah)} tercatat! Sisa tagihan: ${fmtRp(sisaSetelahBayar)}`);
+  advLoadAccounts();
+}
+
+async function advRefresh() { await advLoadAccounts(); }
 let saAdminsData = []; // Data semua admin
 
 async function initSuperAdmin() {
@@ -3596,7 +3816,7 @@ function backToWelcome() {
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
   localStorage.setItem('admonitor_last_view', view);
-  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa','view-superadmin'].forEach(id => {
+  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa','view-superadmin','view-adv'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -3639,6 +3859,11 @@ function showView(view) {
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
     loadFonnteConfig();
     renderJadwalGrid();
+  } else if (view === 'finance') {
+    document.getElementById('view-adv').style.display = 'block';
+    const navEl = document.getElementById('nav-adv');
+    if (navEl) navEl.classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
   } else if (view === 'superadmin') {
     document.getElementById('view-superadmin').style.display = 'block';
     const navEl = document.getElementById('nav-superadmin');
@@ -4380,9 +4605,17 @@ function applyPlatformSelection() {
       if (!saErr && saData) {
         currentUser.isSuperAdmin = true;
         await initSuperAdmin();
-        return; // Stop — jangan lanjut ke initApp biasa
+        return;
       }
     } catch(e) {}
+
+    // Cek finance role saat reload
+    const financeData = await checkADVRole(currentUser.id);
+    if (financeData) {
+      currentUser.isADV = true;
+      await initADV(financeData.admin_user_id);
+      return;
+    }
 
     await loadUserConfig();
     initApp();
