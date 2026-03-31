@@ -2180,15 +2180,20 @@ async function advLoadAccounts() {
   if (!advAdminId) return;
 
   try {
-    // Ambil token Meta admin yang di-assign
-    const { data: ucData } = await sb.from('user_config')
-      .select('meta_token, meta_tokens')
-      .eq('user_id', advAdminId).single();
+    // Ambil token Meta dan limits admin via endpoint (bypass RLS)
+    const configResp = await fetch('/api/get-admin-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: advAdminId, member_id: currentUser.id })
+    });
+    const configData = await configResp.json();
 
-    if (!ucData?.meta_token) {
+    if (configData.error || !configData.config?.meta_token) {
       listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Admin belum set token Meta</div>';
       return;
     }
+
+    const ucData = configData.config;
 
     // Ambil semua akun Meta
     let tokens = [];
@@ -2211,11 +2216,9 @@ async function advLoadAccounts() {
       }
     }
 
-    // Ambil limits
-    const { data: limits } = await sb.from('account_limits')
-      .select('*').eq('user_id', advAdminId);
+    // Ambil limits dari response endpoint
     const limMap = {};
-    (limits||[]).forEach(l => limMap[l.account_id] = l);
+    (configData.limits||[]).forEach(l => limMap[l.account_id] = l);
 
     advAccounts = allAccounts.map(acc => ({ ...acc, lim: limMap[acc.id] || null }));
 
