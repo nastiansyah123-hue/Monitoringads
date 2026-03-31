@@ -17,20 +17,9 @@ module.exports = async function handler(req, res) {
     const { data: saCheck } = await sb.from('super_admins').select('user_id').eq('user_id', user_id).single();
     if (!saCheck) return res.status(403).json({ error: 'Bukan super admin' });
 
-    // Tentukan date range
     const todayWIB = getTodayWIB();
     const sinceDate = since || todayWIB;
     const untilDate = until || todayWIB;
-
-    // Tentukan Meta date_preset atau time_range
-    let dateParam = '';
-    if (preset === 'today') {
-      dateParam = `date_preset=today`;
-    } else if (preset === 'yesterday') {
-      dateParam = `date_preset=yesterday`;
-    } else {
-      dateParam = `time_range={"since":"${sinceDate}","until":"${untilDate}"}`;
-    }
 
     // Ambil semua user config
     const { data: configs } = await sb.from('user_config').select('user_id, meta_token, meta_tokens');
@@ -50,35 +39,49 @@ module.exports = async function handler(req, res) {
 
       await Promise.all(tokens.map(async (token) => {
         try {
+          // Step 1: Fetch daftar akun
           const accRes = await fetch(
-            `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}` +
-            `&fields=id,name,insights.${dateParam}{spend,actions,impressions,clicks}` +
-            `&limit=50`
+            `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name&limit=50`
           );
           const accData = await accRes.json();
           if (accData.error) return;
 
-          for (const acc of (accData.data || [])) {
-            if (seenIds.has(acc.id)) continue;
+          // Step 2: Fetch insights per akun PARALEL
+          await Promise.all((accData.data || []).map(async (acc) => {
+            if (seenIds.has(acc.id)) return;
             seenIds.add(acc.id);
 
-            const ins = acc.insights?.data?.[0];
-            const spend = parseFloat(ins?.spend || 0);
-            const hasil = parseInt((ins?.actions || []).find(a =>
-              ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase',
-               'lead','onsite_conversion.lead_grouped'].includes(a.action_type)
-            )?.value || 0);
+            try {
+              // Gunakan time_range untuk semua kasus
+              const insUrl = `https://graph.facebook.com/v19.0/${acc.id}/insights` +
+                `?access_token=${token}` +
+                `&fields=spend,actions,impressions,clicks` +
+                `&time_range={"since":"${sinceDate}","until":"${untilDate}"}` +
+                `&level=account`;
 
-            allAccounts.push({
-              id: acc.id,
-              name: acc.name,
-              spend,
-              hasil,
-              cpr: hasil > 0 ? Math.round(spend / hasil) : 0,
-              impresi: parseInt(ins?.impressions || 0),
-              klik: parseInt(ins?.clicks || 0)
-            });
-          }
+              const insRes = await fetch(insUrl);
+              const insData = await insRes.json();
+              const ins = insData.data?.[0];
+
+              const spend = parseFloat(ins?.spend || 0);
+              const hasil = parseInt((ins?.actions || []).find(a =>
+                ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase',
+                 'lead','onsite_conversion.lead_grouped'].includes(a.action_type)
+              )?.value || 0);
+
+              allAccounts.push({
+                id: acc.id,
+                name: acc.name,
+                spend,
+                hasil,
+                cpr: hasil > 0 ? Math.round(spend / hasil) : 0,
+                impresi: parseInt(ins?.impressions || 0),
+                klik: parseInt(ins?.clicks || 0)
+              });
+            } catch(e) {
+              allAccounts.push({ id: acc.id, name: acc.name, spend: 0, hasil: 0, cpr: 0, impresi: 0, klik: 0 });
+            }
+          }));
         } catch(e) {}
       }));
 
