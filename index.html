@@ -1452,6 +1452,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let currentUser = null;
+let _appInitialized = false;
 
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
@@ -1499,11 +1500,13 @@ async function doLogin() {
   const financeData = await checkADVRole(currentUser.id);
   if (financeData) {
     currentUser.isADV = true;
+    _appInitialized = true;
     await initADV(financeData.admin_user_id);
     return;
   }
 
   // Login normal
+  _appInitialized = true;
   await loadUserConfig();
   initApp();
 }
@@ -2091,6 +2094,53 @@ async function checkADVRole(userId) {
     if (!error && data) return data;
   } catch(e) {}
   return null;
+}
+
+async function checkViewerRole(userId) {
+  try {
+    const { data, error } = await sb.from('viewer_users')
+      .select('user_id, admin_user_id')
+      .eq('user_id', userId).single();
+    if (!error && data) return data;
+  } catch(e) {}
+  return null;
+}
+
+async function initViewer(adminUserId) {
+  // Viewer: load data admin tapi tidak bisa edit apapun
+  // Ambil token Meta dari admin
+  const { data: ucData } = await sb.from('user_config')
+    .select('meta_token, meta_tokens')
+    .eq('user_id', adminUserId).single();
+
+  if (ucData?.meta_token) {
+    apiConfig.meta = { token: ucData.meta_token, bizId: '' };
+    let tokens = [];
+    if (ucData.meta_tokens) {
+      try { tokens = JSON.parse(ucData.meta_tokens).map(t=>t.token).filter(Boolean); } catch(e){}
+    }
+    if (!tokens.length) tokens = [ucData.meta_token];
+    metaTokens = tokens.map((t,i) => ({ label: `Token ${i+1}`, token: t }));
+  }
+
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-layout').style.display = 'flex';
+
+  // Badge Viewer
+  const sidebarFooter = document.querySelector('.sidebar-footer');
+  if (sidebarFooter) {
+    const badge = document.createElement('div');
+    badge.innerHTML = `<div style="padding:8px 12px;background:rgba(34,211,160,0.15);border-radius:8px;margin-bottom:8px;font-size:11px;color:#22d3a0;font-weight:600;text-align:center">👁 VIEWER</div>`;
+    sidebarFooter.prepend(badge);
+  }
+
+  // Sembunyikan menu edit
+  ['nav-wa','nav-adaccounts','nav-tim'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  initApp();
 }
 
 async function initADV(adminUserId) {
@@ -4800,7 +4850,7 @@ function applyPlatformSelection() {
   }
 
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
+    if (event === 'SIGNED_IN' && session && !_appInitialized) {
       currentUser = session.user;
 
       // Cek super admin
@@ -4813,6 +4863,22 @@ function applyPlatformSelection() {
           return;
         }
       } catch(e) {}
+
+      // Cek ADV role
+      const advData = await checkADVRole(currentUser.id);
+      if (advData) {
+        currentUser.isADV = true;
+        await initADV(advData.admin_user_id);
+        return;
+      }
+
+      // Cek Viewer role
+      const viewerData = await checkViewerRole(currentUser.id);
+      if (viewerData) {
+        currentUser.isViewer = true;
+        await initViewer(viewerData.admin_user_id);
+        return;
+      }
 
       // Login normal
       await loadUserConfig();
