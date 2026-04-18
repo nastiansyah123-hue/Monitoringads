@@ -4633,33 +4633,64 @@ async function openCreativeAnalysis(adId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         thumbnail_url: ad.thumbnail || null,
-        ad_name:    ad.name,
-        spend:      ad.spend,
-        hasil:      ad.hasil,
-        cpr:        ad.cpr,
-        ctr:        ad.ctr,
-        impressions: ad.impressions,
-        clicks:     ad.clicks,
-        frequency:  ad.frequency,
-        badge
+        ad_name: ad.name, spend: ad.spend, hasil: ad.hasil,
+        cpr: ad.cpr, ctr: ad.ctr, impressions: ad.impressions,
+        clicks: ad.clicks, frequency: ad.frequency, badge
       })
     });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
 
-    const txt = data.analysis || '';
-    const html = txt
+    if (!resp.ok) throw new Error('Server error ' + resp.status);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuffer = '';
+    let fullText = '';
+    let hasImage = !!ad.thumbnail;
+
+    // Siapkan container streaming
+    bodyEl.innerHTML = `<div id="creative-stream-out" style="font-size:13px;line-height:1.8;color:var(--text);min-height:60px"></div>`;
+    const streamOut = document.getElementById('creative-stream-out');
+
+    const renderStream = () => {
+      const html = fullText
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\n/g,'<br>');
+      streamOut.innerHTML = html + '<span style="opacity:.5">▌</span>';
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split('\n');
+      sseBuffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') break;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.error) throw new Error(parsed.error);
+          if (parsed.meta) { hasImage = parsed.meta.has_image; continue; }
+          if (parsed.text) { fullText += parsed.text; renderStream(); }
+        } catch(e) { if (e.message !== 'Unexpected end') throw e; }
+      }
+    }
+
+    // Selesai — render final tanpa cursor
+    const finalHtml = fullText
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
       .replace(/\n/g,'<br>');
 
-    const noImgNote = !data.has_image && ad.thumbnail
-      ? `<div style="font-size:11px;color:var(--amber-text);background:var(--amber-bg);border-radius:7px;padding:8px 12px;margin-bottom:14px">⚠️ Gambar tidak bisa dimuat — analisis berdasarkan data metrik saja</div>`
+    const noImgNote = !hasImage && ad.thumbnail
+      ? `<div style="font-size:11px;color:var(--amber-text);background:var(--amber-bg);border-radius:7px;padding:8px 12px;margin-bottom:12px">⚠️ Gambar tidak bisa dimuat — analisis berdasarkan data metrik</div>`
       : !ad.thumbnail
-      ? `<div style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:7px;padding:8px 12px;margin-bottom:14px">ℹ️ Tidak ada thumbnail — analisis berdasarkan data metrik</div>`
+      ? `<div style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:7px;padding:8px 12px;margin-bottom:12px">ℹ️ Tidak ada thumbnail — analisis dari data metrik</div>`
       : '';
 
-    bodyEl.innerHTML = `${noImgNote}<div style="font-size:13px;line-height:1.8;color:var(--text)">${html}</div>
+    bodyEl.innerHTML = `${noImgNote}<div style="font-size:13px;line-height:1.8;color:var(--text)">${finalHtml}</div>
       <div style="margin-top:20px;text-align:right">
         <button onclick="closeCreativeModal()" style="padding:8px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-size:13px">Tutup</button>
       </div>`;
