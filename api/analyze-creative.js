@@ -44,11 +44,11 @@ Semua jawaban dalam Bahasa Indonesia.`;
 
   const conciseNote = 'Setiap bagian analisis maksimal 3 kalimat. Langsung ke poin, tidak perlu intro.';
 
-  const grokSection = `\n\n**🎯 Prompt untuk Grok**\nTulis 1 prompt bahasa Indonesia siap copy-paste ke Grok atau image-to-image generator. Harus mencakup: deskripsi subjek & produk, style background, komposisi & framing, pencahayaan, palet warna, saran teks overlay, mood visual, dan referensi style. Tulis sebagai satu paragraf padat tanpa bullet. Tidak perlu penjelasan tambahan — langsung promptnya saja.`;
+  const headlineSection = `\n\n**💡 Rekomendasi Headline**\nTulis 5 pilihan headline iklan yang bisa langsung dipakai. Singkat, kuat, sesuai produk dan audience Indonesia. Format: nomor + headline saja, tanpa penjelasan.`;
 
   const textPrompt = imageBlock
-    ? `Analisis iklan Meta Ads ini:\nNama: ${ad_name}\nData: ${metricsSummary}\n\n${conciseNote}\n\n**🖼️ Analisis Visual**\nLihat gambarnya: hook, produk, teks overlay, komposisi, warna — apa yang kamu lihat?\n\n**✅ Yang Bekerja**\nElemen visual yang berkontribusi pada performa ${badge === 'winner' ? 'bagus' : 'ini'}.\n\n**⚠️ Kelemahan Visual**\n${badge === 'winner' ? 'Apa yang masih bisa ditingkatkan?' : 'Masalah visual utama penyebab performa rendah.'}\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.${grokSection}`
-    : `Analisis iklan Meta Ads ini (tanpa gambar):\nNama: ${ad_name}\nData: ${metricsSummary}\n\n${conciseNote}\n\n**📊 Diagnosa dari Data**\nApa yang metrik ini ceritakan tentang kreativnya?\n\n**⚠️ Kemungkinan Masalah Visual**\nBerdasarkan CTR dan CPR, masalah visual yang kemungkinan terjadi?\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.${grokSection}`;
+    ? `Analisis iklan Meta Ads ini:\nNama: ${ad_name}\nData: ${metricsSummary}\n\n${conciseNote}\n\n**🖼️ Analisis Visual**\nLihat gambarnya: hook, produk, teks overlay, komposisi, warna — apa yang kamu lihat?\n\n**✅ Yang Bekerja**\nElemen visual yang berkontribusi pada performa ${badge === 'winner' ? 'bagus' : 'ini'}.\n\n**⚠️ Kelemahan Visual**\n${badge === 'winner' ? 'Apa yang masih bisa ditingkatkan?' : 'Masalah visual utama penyebab performa rendah.'}\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.${headlineSection}`
+    : `Analisis iklan Meta Ads ini (tanpa gambar):\nNama: ${ad_name}\nData: ${metricsSummary}\n\n${conciseNote}\n\n**📊 Diagnosa dari Data**\nApa yang metrik ini ceritakan tentang kreativnya?\n\n**⚠️ Kemungkinan Masalah Visual**\nBerdasarkan CTR dan CPR, masalah visual yang kemungkinan terjadi?\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.${headlineSection}`;
 
   const contentBlocks = imageBlock
     ? [imageBlock, { type: 'text', text: textPrompt }]
