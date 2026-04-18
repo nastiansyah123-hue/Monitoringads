@@ -36,17 +36,19 @@ module.exports = async function handler(req, res) {
   const badgeLabel = badge === 'winner' ? '🏆 Winner' : badge === 'underperform' ? '🔴 Underperform' : '⚠️ Average';
 
   const systemPrompt = `Kamu adalah creative strategist dan visual analyst untuk Meta Ads, spesialis pasar Indonesia.
-Kamu ahli mengevaluasi konten iklan secara visual dan mengidentifikasi elemen yang membuat iklan perform bagus atau buruk.
+Kamu ahli mengevaluasi konten iklan secara visual dan membuat prompt image generator yang detail dan efektif.
 Yang kamu perhatikan: hook visual, kejelasan produk, text overlay, social proof, CTA visual, warna & kontras, emosi & relevansi untuk audience Indonesia.
-Berikan analisis praktis dan actionable dalam Bahasa Indonesia.`;
+Semua jawaban dalam Bahasa Indonesia.`;
 
   const metricsSummary = `Spend: Rp${Math.round(spend||0).toLocaleString('id-ID')} | Hasil: ${hasil||0} | CPR: ${cpr>0?'Rp'+Math.round(cpr).toLocaleString('id-ID'):'–'} | CTR: ${parseFloat(ctr||0).toFixed(2)}% | Freq: ${parseFloat(frequency||0).toFixed(1)} | Status: ${badgeLabel}`;
 
-  const conciseNote = '\n\nPenting: Setiap bagian maksimal 3 kalimat. Langsung ke poin, tidak perlu intro.';
+  const conciseNote = 'Setiap bagian analisis maksimal 3 kalimat. Langsung ke poin, tidak perlu intro.';
+
+  const grokSection = `\n\n**🎯 Prompt untuk Grok**\nTulis 1 prompt bahasa Indonesia siap copy-paste ke Grok atau image-to-image generator. Harus mencakup: deskripsi subjek & produk, style background, komposisi & framing, pencahayaan, palet warna, saran teks overlay, mood visual, dan referensi style. Tulis sebagai satu paragraf padat tanpa bullet. Tidak perlu penjelasan tambahan — langsung promptnya saja.`;
 
   const textPrompt = imageBlock
-    ? `Analisis iklan Meta Ads ini:\nNama: ${ad_name}\nData: ${metricsSummary}\n\nLihat gambarnya, jawab 4 bagian berikut:${conciseNote}\n\n**🖼️ Analisis Visual**\nHook, produk, teks overlay, warna — apa yang kamu lihat?\n\n**✅ Yang Bekerja**\nElemen visual yang berkontribusi pada performa ${badge === 'winner' ? 'bagus' : 'ini'}.\n\n**⚠️ Kelemahan Visual**\n${badge === 'winner' ? 'Apa yang masih bisa ditingkatkan?' : 'Masalah visual utama penyebab performa rendah.'}\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.`
-    : `Analisis iklan Meta Ads ini (tanpa gambar):\nNama: ${ad_name}\nData: ${metricsSummary}\n\nJawab 3 bagian berikut:${conciseNote}\n\n**📊 Diagnosa dari Data**\nApa yang metrik ini ceritakan tentang kreativnya?\n\n**⚠️ Kemungkinan Masalah Visual**\nBerdasarkan CTR dan CPR, masalah visual yang kemungkinan terjadi?\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.`;
+    ? `Analisis iklan Meta Ads ini:\nNama: ${ad_name}\nData: ${metricsSummary}\n\n${conciseNote}\n\n**🖼️ Analisis Visual**\nLihat gambarnya: hook, produk, teks overlay, komposisi, warna — apa yang kamu lihat?\n\n**✅ Yang Bekerja**\nElemen visual yang berkontribusi pada performa ${badge === 'winner' ? 'bagus' : 'ini'}.\n\n**⚠️ Kelemahan Visual**\n${badge === 'winner' ? 'Apa yang masih bisa ditingkatkan?' : 'Masalah visual utama penyebab performa rendah.'}\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.${grokSection}`
+    : `Analisis iklan Meta Ads ini (tanpa gambar):\nNama: ${ad_name}\nData: ${metricsSummary}\n\n${conciseNote}\n\n**📊 Diagnosa dari Data**\nApa yang metrik ini ceritakan tentang kreativnya?\n\n**⚠️ Kemungkinan Masalah Visual**\nBerdasarkan CTR dan CPR, masalah visual yang kemungkinan terjadi?\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.${grokSection}`;
 
   const contentBlocks = imageBlock
     ? [imageBlock, { type: 'text', text: textPrompt }]
@@ -63,7 +65,7 @@ Berikan analisis praktis dan actionable dalam Bahasa Indonesia.`;
     const client = new Anthropic({ apiKey });
     const stream = client.messages.stream({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 1400,
       system: systemPrompt,
       messages: [{ role: 'user', content: contentBlocks }]
     });
