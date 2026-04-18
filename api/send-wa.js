@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
     // 1. Ambil semua user config (token Meta + info SPV)
     const { data: userConfigs, error: ucErr } = await sb
       .from('user_config')
-      .select('user_id, meta_token, spv_name, spv_phone, wa_jadwal');
+      .select('user_id, meta_token, meta_tokens, spv_name, spv_phone, wa_jadwal');
 
     if (ucErr) throw new Error('user_config error: ' + ucErr.message);
     if (!userConfigs?.length) return res.json({ sent: 0, message: 'No user configs' });
@@ -37,7 +37,15 @@ module.exports = async function handler(req, res) {
 
     // 2. Proses per admin
     for (const uc of userConfigs) {
-      if (!uc.meta_token) continue;
+      // Kumpulkan semua token (multi-token support)
+      let metaTokensList = [];
+      if (uc.meta_tokens) {
+        try { metaTokensList = JSON.parse(uc.meta_tokens).map(t => t.token).filter(Boolean); } catch(e) {}
+      }
+      if (!metaTokensList.length && uc.meta_token) metaTokensList = [uc.meta_token];
+      if (!metaTokensList.length) continue;
+
+      const META_TOKEN = metaTokensList[0];
 
       // Cek apakah jam sekarang ada di jadwal user ini
       const jadwalUser = (uc.wa_jadwal || '9,14,18,21')
@@ -50,8 +58,6 @@ module.exports = async function handler(req, res) {
 
       console.log(`User ${uc.user_id}: jam ${jamWIB} sesuai jadwal, kirim WA...`);
 
-      const META_TOKEN = uc.meta_token;
-
       // Ambil advertisers milik admin ini
       const { data: advertisers } = await sb
         .from('advertisers')
@@ -60,17 +66,19 @@ module.exports = async function handler(req, res) {
 
       if (!advertisers?.length) continue;
 
-      // Ambil nama akun dari Meta API
-      const metaAccRes = await fetch(
-        `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${META_TOKEN}&fields=id,name&limit=50`
-      );
-      const metaAccData = await metaAccRes.json();
-      if (metaAccData.error) {
-        console.error('Meta token invalid for user', uc.user_id);
-        continue;
-      }
+      // Ambil nama akun dari SEMUA token
       const accNameMap = {};
-      (metaAccData.data || []).forEach(a => accNameMap[a.id] = a.name);
+      for (const tok of metaTokensList) {
+        try {
+          const metaAccRes = await fetch(
+            `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${tok}&fields=id,name&limit=50`
+          );
+          const metaAccData = await metaAccRes.json();
+          if (!metaAccData.error) {
+            (metaAccData.data || []).forEach(a => { if (!accNameMap[a.id]) accNameMap[a.id] = a.name; });
+          }
+        } catch(e) {}
+      }
 
       // Kumpulkan data semua akun admin ini untuk SPV
       const semuaAkunSPV = [];
@@ -83,11 +91,22 @@ module.exports = async function handler(req, res) {
 
         const akunReports = [];
 
+        // Buat peta accId → token yang benar
+        const accTokenMap = {};
+        for (const tok of metaTokensList) {
+          try {
+            const r = await fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${tok}&fields=id&limit=50`);
+            const d = await r.json();
+            if (!d.error) (d.data || []).forEach(a => { if (!accTokenMap[a.id]) accTokenMap[a.id] = tok; });
+          } catch(e) {}
+        }
+
         for (const accId of accounts) {
           try {
             const namaAkun = accNameMap[accId] || accId;
+            const accToken = accTokenMap[accId] || META_TOKEN;
             const url = `https://graph.facebook.com/v19.0/${accId}/campaigns` +
-              `?access_token=${META_TOKEN}` +
+              `?access_token=${accToken}` +
               `&fields=id,name,status,insights.date_preset(today){spend,actions,impressions,clicks}` +
               `&filtering=[{"field":"effective_status","operator":"IN","value":["ACTIVE"]}]` +
               `&limit=30`;
@@ -106,8 +125,8 @@ module.exports = async function handler(req, res) {
               if (spend <= 0) continue;
 
               const _ht = ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','onsite_web_app_purchase','web_app_in_store_purchase','onsite_web_purchase','purchase','lead','onsite_conversion.lead_grouped','onsite_web_lead','onsite_conversion.lead','offsite_conversion.fb_pixel_lead','onsite_conversion.messaging_first_reply','onsite_conversion.messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_user_depth_2_message_send'];
-            let _ha = null; for (const _t of _ht) { _ha = (ins?.actions||ins?.data?.[0]?.actions||[]).find(a=>a.action_type===_t); if(_ha) break; }
-            const hasil = parseInt(_ha?.value || 0);
+              let _ha = null; for (const _t of _ht) { _ha = (ins?.actions || []).find(a => a.action_type === _t); if (_ha) break; }
+              const hasil = parseInt(_ha?.value || 0);
               const cpr = hasil > 0 ? Math.round(spend / hasil) : 0;
               const impresi = parseInt(ins.impressions || 0);
               const klik = parseInt(ins.clicks || 0);
