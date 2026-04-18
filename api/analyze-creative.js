@@ -13,17 +13,14 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY belum diset' });
 
-  const hasImage = !!thumbnail_url;
+  // Fetch thumbnail dengan timeout pendek (4 detik)
   let imageBlock = null;
-
-  // Coba fetch thumbnail dan konvert ke base64
-  if (hasImage) {
+  if (thumbnail_url) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+      const timeout = setTimeout(() => controller.abort(), 4000);
       const imgRes = await fetch(thumbnail_url, { signal: controller.signal });
       clearTimeout(timeout);
-
       if (imgRes.ok) {
         const buffer = await imgRes.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
@@ -32,90 +29,54 @@ module.exports = async function handler(req, res) {
         imageBlock = { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
       }
     } catch (e) {
-      console.warn('Thumbnail fetch failed, proceeding text-only:', e.message);
+      // Gambar gagal, lanjut tanpa gambar
     }
   }
 
   const badgeLabel = badge === 'winner' ? '🏆 Winner' : badge === 'underperform' ? '🔴 Underperform' : '⚠️ Average';
-  const metricsSummary = `
-- Spend: Rp${Math.round(spend || 0).toLocaleString('id-ID')}
-- Hasil: ${hasil || 0}
-- CPR: ${cpr > 0 ? 'Rp' + Math.round(cpr).toLocaleString('id-ID') : 'belum ada hasil'}
-- CTR: ${parseFloat(ctr || 0).toFixed(2)}%
-- Impresi: ${(impressions || 0).toLocaleString('id-ID')}
-- Klik: ${(clicks || 0).toLocaleString('id-ID')}
-- Frequency: ${parseFloat(frequency || 0).toFixed(1)}
-- Status performa: ${badgeLabel}`;
 
   const systemPrompt = `Kamu adalah creative strategist dan visual analyst untuk Meta Ads, spesialis pasar Indonesia.
 Kamu ahli mengevaluasi konten iklan secara visual dan mengidentifikasi elemen yang membuat iklan perform bagus atau buruk.
+Yang kamu perhatikan: hook visual, kejelasan produk, text overlay, social proof, CTA visual, warna & kontras, emosi & relevansi untuk audience Indonesia.
+Berikan analisis praktis dan actionable dalam Bahasa Indonesia.`;
 
-Yang kamu perhatikan saat analisis visual:
-- Hook visual: apakah gambar langsung menarik perhatian dalam 1–2 detik?
-- Kejelasan produk: produk terlihat jelas dan menarik?
-- Text overlay: ada headline/promo yang terbaca dengan mudah?
-- Social proof: ada testimoni, angka, bintang rating, atau endorser?
-- CTA visual: ada elemen yang mendorong action (panah, tombol, sticker)?
-- Warna & kontras: apakah warna menarik perhatian atau justru membosankan?
-- Emosi & relevansi: apakah visual memunculkan emosi yang tepat untuk target audience Indonesia?
+  const metricsSummary = `Spend: Rp${Math.round(spend||0).toLocaleString('id-ID')} | Hasil: ${hasil||0} | CPR: ${cpr>0?'Rp'+Math.round(cpr).toLocaleString('id-ID'):'–'} | CTR: ${parseFloat(ctr||0).toFixed(2)}% | Freq: ${parseFloat(frequency||0).toFixed(1)} | Status: ${badgeLabel}`;
 
-Berikan analisis dalam Bahasa Indonesia yang praktis dan actionable.`;
+  const conciseNote = '\n\nPenting: Setiap bagian maksimal 3 kalimat. Langsung ke poin, tidak perlu intro.';
 
   const textPrompt = imageBlock
-    ? `Analisis konten iklan Meta Ads berikut secara visual dan berdasarkan performanya:
+    ? `Analisis iklan Meta Ads ini:\nNama: ${ad_name}\nData: ${metricsSummary}\n\nLihat gambarnya, jawab 4 bagian berikut:${conciseNote}\n\n**🖼️ Analisis Visual**\nHook, produk, teks overlay, warna — apa yang kamu lihat?\n\n**✅ Yang Bekerja**\nElemen visual yang berkontribusi pada performa ${badge === 'winner' ? 'bagus' : 'ini'}.\n\n**⚠️ Kelemahan Visual**\n${badge === 'winner' ? 'Apa yang masih bisa ditingkatkan?' : 'Masalah visual utama penyebab performa rendah.'}\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.`
+    : `Analisis iklan Meta Ads ini (tanpa gambar):\nNama: ${ad_name}\nData: ${metricsSummary}\n\nJawab 3 bagian berikut:${conciseNote}\n\n**📊 Diagnosa dari Data**\nApa yang metrik ini ceritakan tentang kreativnya?\n\n**⚠️ Kemungkinan Masalah Visual**\nBerdasarkan CTR dan CPR, masalah visual yang kemungkinan terjadi?\n\n**✏️ Brief Konten Baru**\nBackground, posisi produk, teks overlay, tone warna — spesifik untuk desainer.`;
 
-**Nama Ad:** ${ad_name}
-**Data Performa:**${metricsSummary}
+  const contentBlocks = imageBlock
+    ? [imageBlock, { type: 'text', text: textPrompt }]
+    : [{ type: 'text', text: textPrompt }];
 
-Lihat gambarnya dan berikan analisis lengkap dalam format berikut:
-
-**🖼️ Analisis Visual**
-Jelaskan apa yang kamu lihat: hook visual, kejelasan produk, text overlay, komposisi, warna. Spesifik ke detail gambar yang kamu lihat.
-
-**✅ Elemen yang Bekerja**
-${badge === 'winner' ? '2–3 elemen visual yang kemungkinan besar berkontribusi pada performa bagus ini.' : badge === 'underperform' ? 'Kalau ada, sebutkan 1–2 elemen yang masih oke.' : '1–2 elemen yang cukup oke.'}
-
-**⚠️ Kelemahan Visual**
-${badge === 'winner' ? 'Kalau ada, apa yang masih bisa ditingkatkan?' : '2–3 masalah visual utama yang kemungkinan menyebabkan performa rendah.'}
-
-**✏️ Brief Konten Baru**
-Deskripsikan konten baru yang harus dibuat tim kreatif berdasarkan analisis ini. Spesifik: background, posisi produk, teks overlay apa, elemen tambahan apa, tone warna. Buat dalam format brief yang bisa langsung diberikan ke desainer.`
-
-    : `Analisis konten iklan Meta Ads berikut berdasarkan performanya (gambar tidak tersedia):
-
-**Nama Ad:** ${ad_name}
-**Data Performa:**${metricsSummary}
-
-Berikan rekomendasi dalam format berikut:
-
-**📊 Diagnosa dari Data**
-Apa yang data metrik ini ceritakan tentang kreativnya? (CTR tinggi/rendah = signal apa untuk visual)
-
-**⚠️ Kemungkinan Masalah Visual**
-Berdasarkan pattern data (CTR, CPR, frequency), apa masalah visual yang kemungkinan terjadi?
-
-**✏️ Brief Konten Baru**
-Deskripsikan konten baru yang direkomendasikan. Spesifik: background, posisi produk, teks overlay, elemen tambahan, tone warna. Format yang bisa langsung diberikan ke desainer.`;
+  // Streaming response via SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  // Kirim has_image info dulu
+  res.write(`data: ${JSON.stringify({ meta: { has_image: !!imageBlock } })}\n\n`);
 
   try {
     const client = new Anthropic({ apiKey });
-
-    const contentBlocks = imageBlock
-      ? [imageBlock, { type: 'text', text: textPrompt }]
-      : [{ type: 'text', text: textPrompt }];
-
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
+    const stream = client.messages.stream({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
       system: systemPrompt,
       messages: [{ role: 'user', content: contentBlocks }]
     });
 
-    const analysis = message.content[0]?.text || 'Tidak ada respons dari AI';
-    return res.json({ analysis, has_image: !!imageBlock });
-
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+        res.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`);
+      }
+    }
+    res.write(`data: [DONE]\n\n`);
+    res.end();
   } catch (e) {
-    console.error('Creative analysis error:', e);
-    return res.status(500).json({ error: e.message });
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+    res.end();
   }
 };
