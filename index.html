@@ -4587,6 +4587,26 @@ function closeCreativeModal() {
   document.getElementById('creative-modal-overlay').style.display = 'none';
 }
 
+function copyGrokPrompt() {
+  const el = document.getElementById('grok-prompt-text');
+  if (!el) return;
+  navigator.clipboard.writeText(el.innerText).then(() => {
+    const btn = document.getElementById('copy-grok-btn');
+    if (btn) { btn.textContent = '✓ Copied!'; btn.style.color = '#22d3a0'; btn.style.borderColor = '#22d3a0'; }
+    setTimeout(() => {
+      if (btn) { btn.textContent = 'Copy'; btn.style.color = '#9f7aea'; btn.style.borderColor = 'rgba(159,122,234,.5)'; }
+    }, 2000);
+  }).catch(() => {
+    // Fallback untuk browser lama
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    window.getSelection().removeAllRanges();
+  });
+}
+
 async function openCreativeAnalysis(adId) {
   const ad = _kontenAdsMap[adId];
   if (!ad) { alert('Data konten tidak ditemukan'); return; }
@@ -4652,7 +4672,10 @@ async function openCreativeAnalysis(adId) {
     const streamOut = document.getElementById('creative-stream-out');
 
     const renderStream = () => {
-      const html = fullText
+      // Sembunyikan bagian Grok prompt saat streaming (tampil di box sendiri nanti)
+      const grokMarkerIdx = fullText.indexOf('**🎯 Prompt untuk Grok**');
+      const displayText = grokMarkerIdx >= 0 ? fullText.slice(0, grokMarkerIdx) : fullText;
+      const html = displayText
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
         .replace(/\n/g,'<br>');
@@ -4678,8 +4701,13 @@ async function openCreativeAnalysis(adId) {
       }
     }
 
-    // Selesai — render final tanpa cursor
-    const finalHtml = fullText
+    // Selesai — pisahkan bagian Grok prompt dari analisis
+    const grokMarker = '**🎯 Prompt untuk Grok**';
+    const grokIdx = fullText.indexOf(grokMarker);
+    const analysisPart = grokIdx >= 0 ? fullText.slice(0, grokIdx).trim() : fullText.trim();
+    const grokRaw      = grokIdx >= 0 ? fullText.slice(grokIdx + grokMarker.length).trim() : '';
+
+    const toHtml = t => t
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
       .replace(/\n/g,'<br>');
@@ -4690,7 +4718,18 @@ async function openCreativeAnalysis(adId) {
       ? `<div style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:7px;padding:8px 12px;margin-bottom:12px">ℹ️ Tidak ada thumbnail — analisis dari data metrik</div>`
       : '';
 
-    bodyEl.innerHTML = `${noImgNote}<div style="font-size:13px;line-height:1.8;color:var(--text)">${finalHtml}</div>
+    const grokBox = grokRaw ? `
+      <div style="margin-top:18px;border:1.5px solid rgba(159,122,234,.5);border-radius:12px;overflow:hidden">
+        <div style="background:rgba(159,122,234,.15);padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:12px;font-weight:600;color:#9f7aea">🎯 Prompt untuk Grok / Image Generator</div>
+          <button id="copy-grok-btn" onclick="copyGrokPrompt()" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(159,122,234,.5);background:rgba(159,122,234,.15);color:#9f7aea;cursor:pointer;font-family:var(--sans);font-weight:500">Copy</button>
+        </div>
+        <div id="grok-prompt-text" style="padding:12px 14px;font-size:12px;font-family:var(--mono);line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;background:var(--surface2)">${grokRaw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      </div>` : '';
+
+    bodyEl.innerHTML = `${noImgNote}
+      <div style="font-size:13px;line-height:1.8;color:var(--text)">${toHtml(analysisPart)}</div>
+      ${grokBox}
       <div style="margin-top:20px;text-align:right">
         <button onclick="closeCreativeModal()" style="padding:8px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-size:13px">Tutup</button>
       </div>`;
