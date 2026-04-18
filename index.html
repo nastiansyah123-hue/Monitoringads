@@ -526,6 +526,10 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
         Tim
       </button>
+      <button class="nav-item" id="nav-konten" onclick="showView('konten')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+        Konten
+      </button>
     </div>
     <div class="nav-section">
       <div class="nav-label">Integrasi</div>
@@ -1307,6 +1311,58 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
           <button onclick="closeTimModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:13px">Batal</button>
           <button onclick="saveTim()" id="tim-modal-btn" style="padding:8px 20px;border-radius:8px;border:none;background:#4f8ef7;color:white;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500">Tambah</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Content Performance Ranking ─────────────────────────── -->
+    <div id="view-konten" style="display:none;min-height:100vh;background:var(--bg)">
+      <!-- Header -->
+      <div class="page-header">
+        <div class="page-title">
+          <h1>🏆 Content Performance</h1>
+          <p id="konten-sub">Ranking konten iklan berdasarkan performa</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-sm" onclick="loadKontenView()" id="konten-refresh-btn">↻ Muat Data</button>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div style="padding:12px 28px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select class="btn btn-sm" id="konten-filter-acc" onchange="onKontenAccChange()" style="appearance:none;padding-right:24px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%237a8099' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">Semua Akun</option>
+        </select>
+        <select class="btn btn-sm" id="konten-filter-camp" onchange="filterKontenByCamp()" style="appearance:none;padding-right:24px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%237a8099' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">Semua Kampanye</option>
+        </select>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:4px">
+          <span style="font-size:11px;color:var(--text2)">Target CPR:</span>
+          <input type="number" id="konten-target-cpr" placeholder="cth: 50000"
+            style="font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);width:110px">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text2)">Periode:</span>
+          <span style="font-size:11px;font-family:var(--mono);color:#4f8ef7" id="konten-date-label">–</span>
+          <span style="font-size:10px;color:var(--text3)">(ikuti filter dashboard)</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="loadKontenView()">Tampilkan</button>
+      </div>
+
+      <!-- Legend -->
+      <div style="padding:10px 28px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text3)">Badge:</span>
+        <span style="font-size:11px;padding:2px 10px;border-radius:100px;background:var(--green-bg);color:var(--green-text)">🏆 Winner — CPR &lt; target × 80%</span>
+        <span style="font-size:11px;padding:2px 10px;border-radius:100px;background:var(--amber-bg);color:var(--amber-text)">⚠️ Average — dalam range normal</span>
+        <span style="font-size:11px;padding:2px 10px;border-radius:100px;background:var(--red-bg);color:var(--red-text)">🔴 Underperform — CPR &gt; target × 120% atau 0 hasil</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:4px">· Skor 0–100 berdasarkan Hasil (40%) + CTR (30%) + efisiensi CPR (30%)</span>
+      </div>
+
+      <!-- Summary -->
+      <div id="konten-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 28px;border-bottom:1px solid var(--border)"></div>
+
+      <!-- Ranking List -->
+      <div id="konten-list" style="padding:16px 28px 40px">
+        <div style="padding:40px;text-align:center;color:var(--text2)">Pilih akun dan klik "Tampilkan" untuk muat data konten</div>
       </div>
     </div>
 
@@ -3166,6 +3222,7 @@ async function fetchAndRenderMeta(adAccounts) {
 
       return {
         id: acc.id,
+        _token: acc._token || apiConfig.meta.token,
         name: acc.name,
         platform: 'meta',
         status: statusMap[acc.account_status] || 'Aktif',
@@ -4108,11 +4165,11 @@ function backToWelcome() {
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
   localStorage.setItem('admonitor_last_view', view);
-  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa','view-superadmin','view-adv','view-tim'].forEach(id => {
+  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa','view-superadmin','view-adv','view-tim','view-konten'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  ['dashboard','akun','advertisers','adaccounts','wa','tim','superadmin'].forEach(v => {
+  ['dashboard','akun','advertisers','adaccounts','wa','tim','superadmin','konten'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if (el) el.classList.remove('active');
   });
@@ -4170,8 +4227,278 @@ function showView(view) {
     const navEl = document.getElementById('nav-superadmin');
     if (navEl) navEl.classList.add('active');
     document.getElementById('nav-kampanye-wrap').style.display = 'none';
+  } else if (view === 'konten') {
+    document.getElementById('view-konten').style.display = 'block';
+    document.getElementById('nav-konten').classList.add('active');
+    document.getElementById('nav-kampanye-wrap').style.display = 'none';
+    initKontenView();
   }
   window.scrollTo(0, 0);
+}
+
+// ── Content Performance Ranking ───────────────────────────────────
+let _kontenAllAds = [];
+let _kontenTargetCPR = 0;
+
+function initKontenView() {
+  // Isi dropdown akun dari ALL_DATA
+  const sel = document.getElementById('konten-filter-acc');
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">Semua Akun</option>' +
+    ALL_DATA.filter(a => a.platform === 'meta').map(a =>
+      `<option value="${a.id}" ${a.id === current ? 'selected' : ''}>${a.name}</option>`
+    ).join('');
+
+  // Tampilkan periode aktif
+  const lbl = document.getElementById('konten-date-label');
+  if (lbl) lbl.textContent = dateRange.label;
+
+  // Restore target CPR dari localStorage
+  const saved = localStorage.getItem('konten_target_cpr');
+  if (saved) document.getElementById('konten-target-cpr').value = saved;
+}
+
+function onKontenAccChange() {
+  // Reset campaign filter saat akun berubah
+  document.getElementById('konten-filter-camp').innerHTML = '<option value="all">Semua Kampanye</option>';
+}
+
+async function loadKontenView() {
+  const accFilter = document.getElementById('konten-filter-acc').value;
+  const campFilter = document.getElementById('konten-filter-camp').value;
+  _kontenTargetCPR = parseFloat(document.getElementById('konten-target-cpr').value) || 0;
+  if (_kontenTargetCPR > 0) localStorage.setItem('konten_target_cpr', _kontenTargetCPR);
+
+  const listEl = document.getElementById('konten-list');
+  const summaryEl = document.getElementById('konten-summary');
+  const subEl = document.getElementById('konten-sub');
+  const btn = document.getElementById('konten-refresh-btn');
+
+  listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">⏳ Memuat data konten dari Meta API...</div>';
+  summaryEl.innerHTML = '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Memuat...'; }
+
+  const accounts = accFilter === 'all'
+    ? ALL_DATA.filter(a => a.platform === 'meta')
+    : ALL_DATA.filter(a => a.id === accFilter && a.platform === 'meta');
+
+  if (!accounts.length || !isConnected('meta')) {
+    listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Belum ada akun Meta terhubung. Hubungkan token Meta terlebih dahulu.</div>';
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Muat Data'; }
+    return;
+  }
+
+  const allAds = [];
+  const since = dateRange.since;
+  const until = dateRange.until;
+  const hasilTypes = ['web_in_store_purchase','omni_purchase','offsite_conversion.fb_pixel_purchase','onsite_web_app_purchase','web_app_in_store_purchase','onsite_web_purchase','purchase','lead','onsite_conversion.lead_grouped','onsite_web_lead','onsite_conversion.lead','offsite_conversion.fb_pixel_lead','onsite_conversion.messaging_first_reply','onsite_conversion.messaging_conversation_started_7d','onsite_conversion.total_messaging_connection','onsite_conversion.messaging_user_depth_2_message_send'];
+
+  for (const acc of accounts) {
+    const token = acc._token || apiConfig.meta.token;
+    if (!token) continue;
+    try {
+      // Fetch insights level ad
+      let insUrl = `https://graph.facebook.com/v19.0/${acc.id}/insights` +
+        `?access_token=${token}` +
+        `&fields=ad_id,ad_name,campaign_id,campaign_name,adset_name,spend,clicks,impressions,actions,ctr,cpc,cpm,reach,frequency` +
+        `&time_range={"since":"${since}","until":"${until}"}` +
+        `&level=ad&limit=100`;
+
+      const insRes = await fetch(insUrl);
+      const insData = await insRes.json();
+      if (insData.error) { console.warn('Konten insights error', acc.id, insData.error.message); continue; }
+
+      const insRows = insData.data || [];
+      if (!insRows.length) continue;
+
+      // Fetch thumbnail per akun (satu batch)
+      const thumbMap = {};
+      try {
+        const thumbRes = await fetch(`https://graph.facebook.com/v19.0/${acc.id}/ads?access_token=${token}&fields=id,creative{thumbnail_url,image_url}&limit=200`);
+        const thumbData = await thumbRes.json();
+        (thumbData.data || []).forEach(ad => {
+          thumbMap[ad.id] = ad.creative?.thumbnail_url || ad.creative?.image_url || null;
+        });
+      } catch(e) {}
+
+      insRows.forEach(row => {
+        const spend = parseFloat(row.spend || 0);
+        if (spend <= 0) return;
+
+        let hasilAction = null;
+        for (const ht of hasilTypes) {
+          const found = (row.actions || []).find(a => a.action_type === ht);
+          if (found) { hasilAction = found; break; }
+        }
+        const hasil = parseInt(hasilAction?.value || 0);
+
+        allAds.push({
+          id: row.ad_id,
+          name: row.ad_name || '(no name)',
+          campaign_id: row.campaign_id,
+          campaign_name: row.campaign_name || '–',
+          adset_name: row.adset_name || '–',
+          account_id: acc.id,
+          account_name: acc.name,
+          spend,
+          hasil,
+          cpr: hasil > 0 ? Math.round(spend / hasil) : 0,
+          ctr: parseFloat(row.ctr || 0),
+          cpc: parseFloat(row.cpc || 0),
+          cpm: parseFloat(row.cpm || 0),
+          reach: parseInt(row.reach || 0),
+          frequency: parseFloat(row.frequency || 0),
+          impressions: parseInt(row.impressions || 0),
+          clicks: parseInt(row.clicks || 0),
+          thumbnail: thumbMap[row.ad_id] || null,
+          score: 0
+        });
+      });
+    } catch(e) {
+      console.warn('loadKontenView error', acc.id, e.message);
+    }
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '↻ Muat Data'; }
+
+  // Filter by campaign
+  let filtered = campFilter === 'all' ? allAds : allAds.filter(a => a.campaign_id === campFilter);
+
+  _kontenAllAds = allAds;
+
+  // Hitung skor
+  _computeKontenScores(filtered);
+
+  // Update campaign filter dropdown
+  _updateKontenCampFilter(allAds, campFilter);
+
+  if (subEl) subEl.textContent = `${filtered.length} konten · ${dateRange.label}`;
+
+  _renderKontenRanking(filtered);
+}
+
+function _computeKontenScores(ads) {
+  if (!ads.length) return;
+  const maxHasil = Math.max(...ads.map(a => a.hasil), 1);
+  const maxCTR   = Math.max(...ads.map(a => a.ctr), 0.01);
+  const validCPR = ads.filter(a => a.cpr > 0).map(a => a.cpr);
+  const minCPR   = validCPR.length ? Math.min(...validCPR) : 1;
+
+  ads.forEach(ad => {
+    const nHasil = ad.hasil / maxHasil;
+    const nCTR   = ad.ctr / maxCTR;
+    const nCPR   = ad.cpr > 0 ? minCPR / ad.cpr : 0;
+    ad.score = Math.round((nHasil * 0.4 + nCTR * 0.3 + nCPR * 0.3) * 100);
+  });
+
+  ads.sort((a, b) => b.score - a.score);
+}
+
+function _getKontenBadge(ad) {
+  if (_kontenTargetCPR <= 0) return 'none';
+  if (ad.hasil > 0 && ad.cpr > 0 && ad.cpr <= _kontenTargetCPR * 0.8) return 'winner';
+  if ((ad.spend > 50000 && ad.hasil === 0) || (ad.cpr > 0 && ad.cpr > _kontenTargetCPR * 1.2)) return 'underperform';
+  return 'average';
+}
+
+function _updateKontenCampFilter(allAds, current) {
+  const sel = document.getElementById('konten-filter-camp');
+  const campaigns = [...new Map(allAds.map(a => [a.campaign_id, a.campaign_name])).entries()];
+  sel.innerHTML = '<option value="all">Semua Kampanye</option>' +
+    campaigns.map(([id, name]) => `<option value="${id}" ${id === current ? 'selected' : ''}>${name}</option>`).join('');
+}
+
+function filterKontenByCamp() {
+  const campFilter = document.getElementById('konten-filter-camp').value;
+  const filtered = campFilter === 'all' ? _kontenAllAds : _kontenAllAds.filter(a => a.campaign_id === campFilter);
+  _computeKontenScores(filtered);
+  const subEl = document.getElementById('konten-sub');
+  if (subEl) subEl.textContent = `${filtered.length} konten · ${dateRange.label}`;
+  _renderKontenRanking(filtered);
+}
+
+function _renderKontenRanking(ads) {
+  const listEl = document.getElementById('konten-list');
+  const summaryEl = document.getElementById('konten-summary');
+
+  if (!ads.length) {
+    summaryEl.innerHTML = '';
+    listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Tidak ada data konten dengan spend > 0 untuk periode ini</div>';
+    return;
+  }
+
+  // Summary
+  const totalSpend  = ads.reduce((s, a) => s + a.spend, 0);
+  const totalHasil  = ads.reduce((s, a) => s + a.hasil, 0);
+  const avgCPR      = totalHasil > 0 ? Math.round(totalSpend / totalHasil) : 0;
+  const winners     = ads.filter(a => _getKontenBadge(a) === 'winner').length;
+  const underperform = ads.filter(a => _getKontenBadge(a) === 'underperform').length;
+
+  summaryEl.innerHTML = `
+    <div class="mc"><div class="mc-label">Total Konten</div><div class="mc-val">${ads.length}
+      ${_kontenTargetCPR > 0 ? `<span style="font-size:11px;color:var(--green-text);margin-left:6px">🏆${winners}</span><span style="font-size:11px;color:var(--red-text);margin-left:4px">🔴${underperform}</span>` : ''}
+    </div></div>
+    <div class="mc"><div class="mc-label">Total Spend</div><div class="mc-val" style="font-size:16px">${fmtRp(totalSpend)}</div></div>
+    <div class="mc"><div class="mc-label">Total Hasil</div><div class="mc-val">${totalHasil.toLocaleString('id-ID')}</div></div>
+    <div class="mc"><div class="mc-label">Avg CPR</div><div class="mc-val" style="font-size:16px;color:${avgCPR > 0 && _kontenTargetCPR > 0 ? (avgCPR <= _kontenTargetCPR ? 'var(--green-text)' : 'var(--red-text)') : 'var(--text)'}">${avgCPR > 0 ? fmtRp(avgCPR) : '–'}</div></div>
+  `;
+
+  const badgeCfg = {
+    winner:       { label: '🏆 Winner',      bg: 'var(--green-bg)', color: 'var(--green-text)' },
+    average:      { label: '⚠️ Average',     bg: 'var(--amber-bg)', color: 'var(--amber-text)' },
+    underperform: { label: '🔴 Underperform', bg: 'var(--red-bg)',   color: 'var(--red-text)'   },
+    none:         { label: '',               bg: '',                color: ''                  }
+  };
+
+  listEl.innerHTML = ads.map((ad, i) => {
+    const badge  = _getKontenBadge(ad);
+    const bc     = badgeCfg[badge];
+    const rankColor = i === 0 ? '#f5a623' : i === 1 ? '#9ca3af' : i === 2 ? '#cd7c3b' : 'var(--text3)';
+    const scoreColor = ad.score >= 70 ? 'var(--green-text)' : ad.score >= 40 ? 'var(--amber-text)' : 'var(--red-text)';
+
+    return `
+      <div style="display:flex;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;align-items:flex-start;transition:border-color .15s"
+        onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+
+        <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${rankColor};width:28px;flex-shrink:0;padding-top:4px;text-align:center">${i+1}</div>
+
+        ${ad.thumbnail
+          ? `<img src="${ad.thumbnail}" loading="lazy" style="width:68px;height:68px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">`
+          : `<div style="width:68px;height:68px;border-radius:8px;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid var(--border)">🖼️</div>`
+        }
+
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+            <div style="min-width:0">
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ad.name}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ad.campaign_name} · ${ad.adset_name} · <span style="color:var(--text2)">${ad.account_name}</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              ${bc.label ? `<span style="font-size:10px;padding:2px 10px;border-radius:100px;background:${bc.bg};color:${bc.color};font-weight:600;white-space:nowrap">${bc.label}</span>` : ''}
+              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:4px 10px;min-width:52px">
+                <div style="font-size:16px;font-weight:700;font-family:var(--mono);color:${scoreColor}">${ad.score}</div>
+                <div style="font-size:9px;color:var(--text3)">SKOR</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+            ${[
+              ['Spend',    fmtRp(ad.spend)],
+              ['Hasil',    ad.hasil.toLocaleString('id-ID')],
+              ['CPR',      ad.cpr > 0 ? fmtRp(ad.cpr) : '–'],
+              ['CTR',      ad.ctr.toFixed(2) + '%'],
+              ['Freq',     ad.frequency.toFixed(1)],
+              ['Impresi',  fmtImp(ad.impressions)],
+            ].map(([label, val]) => `
+              <div style="background:var(--surface2);border-radius:7px;padding:7px 8px">
+                <div style="font-size:9px;color:var(--text3);margin-bottom:2px">${label}</div>
+                <div style="font-size:11px;font-weight:500;font-family:var(--mono)">${val}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function renderAkun(data) {
