@@ -3048,16 +3048,16 @@ async function testConnections() {
   else res.textContent = results.join(' · ');
 }
 
-// Fetch semua akun dari SEMUA token Meta
+// Fetch semua akun dari SEMUA token Meta — simpan _token di setiap akun
 async function fetchAllTokensMeta() {
-  const tokens = metaTokens.length ? metaTokens : 
+  const tokens = metaTokens.length ? metaTokens :
     (apiConfig.meta?.token ? [{ label: 'Token Utama', token: apiConfig.meta.token }] : []);
-  
+
   if (!tokens.length) return [];
-  
+
   const allAccounts = [];
   const seen = new Set();
-  
+
   for (const t of tokens) {
     if (!t.token) continue;
     try {
@@ -3065,7 +3065,7 @@ async function fetchAllTokensMeta() {
       accounts.forEach(acc => {
         if (!seen.has(acc.id)) {
           seen.add(acc.id);
-          allAccounts.push(acc);
+          allAccounts.push({ ...acc, _token: t.token });
         }
       });
     } catch(e) {
@@ -3089,7 +3089,6 @@ async function fetchAllMetaAccounts(token) {
 }
 
 async function fetchAndRenderMeta(adAccounts) {
-  const token = apiConfig.meta.token;
   const since = dateRange.since;
   const until = dateRange.until;
   const statusMap = { 1:'Aktif', 2:'Paused', 3:'Ended', 7:'Ended' };
@@ -3097,6 +3096,7 @@ async function fetchAndRenderMeta(adAccounts) {
   document.getElementById('last-update').textContent = 'Memuat data Meta (' + adAccounts.length + ' akun)...';
 
   const metaRows = await Promise.all(adAccounts.map(async acc => {
+    const token = acc._token || apiConfig.meta.token;
     try {
       const r = await fetch(`https://graph.facebook.com/v19.0/${acc.id}/insights?access_token=${token}&fields=spend,clicks,impressions,actions&time_range={"since":"${since}","until":"${until}"}&level=account`);
       const d = await r.json();
@@ -3327,8 +3327,9 @@ function renderMetrics(data) {
   document.getElementById('m-total-d').innerHTML = '<span class="up">▲ aktif: '+data.filter(a=>a.status==='Aktif').length+'</span>';
   document.getElementById('m-total-b').style.width = Math.min(100,(total/12*100)).toFixed(0)+'%';
   document.getElementById('m-spend').textContent = fmtRp(spend);
-  document.getElementById('m-spend-d').innerHTML = '<span class="up">▲ +8,3% vs bulan lalu</span>';
-  document.getElementById('m-spend-b').style.width = '65%';
+  document.getElementById('m-spend-d').innerHTML = spend > 0 ? '<span class="up">total spend periode ini</span>' : '<span style="color:var(--text3)">belum ada spend</span>';
+  const maxSpend = Math.max(...ALL_DATA.map(a => a.spend), 1);
+  document.getElementById('m-spend-b').style.width = Math.min(100, Math.round(spend / maxSpend * 100)) + '%';
   document.getElementById('m-ctr').textContent = totalLeads.toLocaleString('id-ID');
   document.getElementById('m-ctr-d').innerHTML = '<span class="up">total hasil/purchase</span>';
   document.getElementById('m-ctr-b').style.width = Math.min(100, totalLeads > 0 ? 70 : 0)+'%';
@@ -3342,24 +3343,33 @@ function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete chart
 function renderSpendChart(data) {
   destroyChart('spend');
   const pColors = { meta:'#1877F2', google:'#EA4335', tiktok:'#e2e8f0', all:'#4f8ef7' };
-  const labels = Array.from({length:30},(_,i)=>String(i+1));
+  // Hitung jumlah hari dari dateRange
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const dayCount = Math.max(1, Math.round((new Date(dateRange.until) - new Date(dateRange.since)) / msPerDay) + 1);
+  const labels = Array.from({length: dayCount}, (_, i) => {
+    const d = new Date(dateRange.since);
+    d.setDate(d.getDate() + i);
+    return (d.getMonth()+1) + '/' + d.getDate();
+  });
   const platforms = currentPlatform==='all' ? ['meta','google','tiktok'] : [currentPlatform];
   const datasets = platforms.map(p => {
-    const d = data.filter(a=>a.platform===p);
-    const base = d.reduce((s,a)=>s+a.spend,0)/30/1e6;
+    const d = data.filter(a => a.platform === p);
+    const totalSpend = d.reduce((s, a) => s + a.spend, 0);
+    // Distribusikan total spend secara merata per hari (data nyata per hari tidak tersedia dari API)
+    const avgPerDay = +(totalSpend / dayCount / 1e6).toFixed(2);
     return {
       label: PLATFORMS[p].label,
-      data: Array.from({length:30},()=>+(base*(0.7+Math.random()*0.65)).toFixed(1)),
+      data: Array.from({length: dayCount}, () => avgPerDay),
       borderColor: pColors[p], backgroundColor: pColors[p]+'18',
-      borderWidth:2, pointRadius:0, tension:.4, fill: platforms.length===1
+      borderWidth: 2, pointRadius: 0, tension: 0, fill: platforms.length === 1
     };
   });
   const legend = document.getElementById('spend-legend');
   legend.innerHTML = platforms.map(p=>`<div class="legend-item"><div class="legend-dot" style="background:${pColors[p]}"></div>${PLATFORMS[p].label}</div>`).join('');
   charts['spend'] = new Chart(document.getElementById('spendChart'), {
-    type:'line', data:{labels,datasets},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4a5068',font:{size:10},maxTicksLimit:6}},
+    type:'line', data:{labels, datasets},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4a5068',font:{size:10},maxTicksLimit:8}},
         y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5068',font:{size:10},callback:v=>v+'jt'}}}}
   });
 }
@@ -3568,6 +3578,16 @@ function filterTable() { renderTable(getFiltered()); }
 // ── Manual Limits ─────────────────────────────────────────────────
 let manualLimits = JSON.parse(localStorage.getItem('admonitor_limits') || '{}');
 
+function refreshAllBudgetViews() {
+  const base = currentPlatform === 'all' ? ALL_DATA : ALL_DATA.filter(a => a.platform === currentPlatform);
+  renderBudgetAlerts(base);
+  renderTable(getFiltered());
+  renderTopAdvTable(base);
+  if (document.getElementById('view-akun')?.style.display !== 'none') {
+    renderAkun(ALL_DATA);
+  }
+}
+
 function toggleEditLimit(id) {
   const edit = document.getElementById('limit-edit-'+id);
   const display = document.getElementById('limit-display-'+id);
@@ -3601,19 +3621,19 @@ async function prosesBayar(id, currentSpend, nominal) {
 async function sudahBayarMobile(id, currentSpend) {
   const input = document.getElementById('mob-bayar-'+id);
   const ok = await prosesBayar(id, currentSpend, parseFloat(input?.value || 0));
-  if (ok) { input.value = ''; renderTable(getFiltered()); }
+  if (ok) { input.value = ''; refreshAllBudgetViews(); }
 }
 
 async function sudahBayarTabel(id, currentSpend) {
   const input = document.getElementById('tbl-bayar-'+id);
   const ok = await prosesBayar(id, currentSpend, parseFloat(input?.value || 0));
-  if (ok) { input.value = ''; renderTable(getFiltered()); renderAkun(ALL_DATA); }
+  if (ok) { input.value = ''; refreshAllBudgetViews(); }
 }
 
 async function sudahBayar(id, currentSpend) {
   const input = document.getElementById('bayar-input-'+id);
   const ok = await prosesBayar(id, currentSpend, parseFloat(input?.value || 0));
-  if (ok) { input.value = ''; renderAkun(ALL_DATA); }
+  if (ok) { input.value = ''; refreshAllBudgetViews(); }
 }
 
 async function saveManualLimit(id, currentSpend) {
@@ -3621,10 +3641,11 @@ async function saveManualLimit(id, currentSpend) {
   const saldoVal = parseFloat(document.getElementById('saldo-input-'+id)?.value || 0);
   if (!limitVal || limitVal <= 0) { alert('Limit akun wajib diisi'); return; }
 
-  // Simpan lokal & render LANGSUNG dulu
-  manualLimits[id] = { limit: limitVal, saldoAwal: saldoVal, spendSaatSet: currentSpend };
+  // Preserve riwayatBayar yang sudah ada
+  const existing = manualLimits[id] || {};
+  manualLimits[id] = { ...existing, limit: limitVal, saldoAwal: saldoVal, spendSaatSet: currentSpend };
   localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
-  renderAkun(ALL_DATA);
+  refreshAllBudgetViews();
 
   // Simpan ke Supabase
   if (currentUser) {
@@ -4087,11 +4108,11 @@ function backToWelcome() {
 // ── View switching ────────────────────────────────────────────────
 function showView(view) {
   localStorage.setItem('admonitor_last_view', view);
-  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa','view-superadmin','view-adv'].forEach(id => {
+  ['main-view','view-akun','view-kampanye','view-advertisers','view-adaccounts','view-wa','view-superadmin','view-adv','view-tim'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  ['dashboard','akun','advertisers','adaccounts','wa'].forEach(v => {
+  ['dashboard','akun','advertisers','adaccounts','wa','tim','superadmin'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if (el) el.classList.remove('active');
   });
