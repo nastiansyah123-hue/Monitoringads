@@ -3710,12 +3710,13 @@ async function prosesBayar(id, currentSpend, nominal) {
   manualLimits[id] = { ...cfg, saldoAwal: sisaSaldo, spendSaatSet: currentSpend, riwayatBayar: riwayat.slice(-10) };
   localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
   if (currentUser) {
-    const { error } = await sb.from('account_limits').upsert({
-      user_id: currentUser.id, account_id: id,
-      limit_amount: cfg.limit || 0, saldo_awal: sisaSaldo,
-      spend_saat_set: currentSpend, updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,account_id' });
-    if (error) console.error('Supabase bayar error:', error.message);
+    try {
+      await fetch('/api/admin-save-limit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.id, account_id: id, limit_amount: cfg.limit || 0, saldo_awal: sisaSaldo, spend_saat_set: currentSpend })
+      });
+    } catch(e) { console.warn('Bayar save error:', e.message); }
   }
   return true;
 }
@@ -3743,26 +3744,21 @@ async function saveManualLimit(id, currentSpend) {
   const saldoVal = parseFloat(document.getElementById('saldo-input-'+id)?.value || 0);
   if (!limitVal || limitVal <= 0) { alert('Limit akun wajib diisi'); return; }
 
-  // Preserve riwayatBayar yang sudah ada
   const existing = manualLimits[id] || {};
   manualLimits[id] = { ...existing, limit: limitVal, saldoAwal: saldoVal, spendSaatSet: currentSpend };
   localStorage.setItem('admonitor_limits', JSON.stringify(manualLimits));
   refreshAllBudgetViews();
 
-  // Simpan ke Supabase
   if (currentUser) {
-    const { error } = await sb.from('account_limits').upsert({
-      user_id: currentUser.id,
-      account_id: id,
-      limit_amount: limitVal,
-      saldo_awal: saldoVal,
-      spend_saat_set: currentSpend,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,account_id' });
-    if (error) {
-      console.error('Supabase save error:', error);
-      alert('Gagal simpan ke cloud: ' + error.message + '\n\nData tersimpan lokal saja.');
-    }
+    try {
+      const resp = await fetch('/api/admin-save-limit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.id, account_id: id, limit_amount: limitVal, saldo_awal: saldoVal, spend_saat_set: currentSpend })
+      });
+      const result = await resp.json();
+      if (!result.success) console.warn('Save limit cloud error:', result.error);
+    } catch(e) { console.warn('Save limit error:', e.message); }
   }
 }
 
