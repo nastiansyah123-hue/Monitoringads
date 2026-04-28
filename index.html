@@ -402,11 +402,22 @@ th.sort-active .sort-icon{opacity:1;color:#4f8ef7;}
 .bi-upload-progress{margin-top:8px;height:4px;background:var(--surface3);border-radius:4px;overflow:hidden;display:none;}
 .bi-upload-progress-fill{height:100%;background:#4f8ef7;border-radius:4px;transition:width .3s;}
 .bi-result-panel{display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;text-align:center;margin-top:14px;}
+/* Objective cards */
+.bi-obj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.bi-obj-card{border:1.5px solid var(--border2);border-radius:12px;padding:16px 14px;cursor:pointer;transition:all .2s;background:var(--surface2);}
+.bi-obj-card:hover{border-color:rgba(79,142,247,.4);transform:translateY(-2px);}
+.bi-obj-card.selected{border-color:#4f8ef7;background:rgba(79,142,247,.08);box-shadow:0 0 0 3px rgba(79,142,247,.1);}
+.bi-obj-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.bi-obj-name{font-size:13px;font-weight:600;margin-bottom:4px;}
+.bi-obj-desc{font-size:11px;color:var(--text2);line-height:1.5;}
 body.light .bi-input{background:#f5f6f8;border-color:rgba(0,0,0,.18);}
 body.light .bi-select{background:#f5f6f8;border-color:rgba(0,0,0,.18);}
 body.light .bi-textarea{background:#f5f6f8;border-color:rgba(0,0,0,.18);}
 body.light .bi-section{background:#ffffff;}
 body.light .bi-img-thumb{background:#e8eaee;}
+body.light .bi-obj-card{background:#f5f6f8;}
+body.light .bi-obj-card.selected{background:rgba(79,142,247,.08);}
+@media(max-width:600px){.bi-obj-grid{grid-template-columns:1fr 1fr;}.bi-body{padding:16px;}.bi-grid2{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -1448,185 +1459,309 @@ body.light .bi-img-thumb{background:#e8eaee;}
       <div class="page-header">
         <div class="page-title">
           <h1>Buat Iklan Meta</h1>
-          <p>Upload konten &amp; buat kampanye langsung tanpa buka Meta Ads Manager</p>
+          <p>Buat kampanye baru tanpa perlu buka Meta Ads Manager</p>
         </div>
       </div>
 
       <!-- Stepper -->
       <div class="bi-stepper">
-        <div class="bi-step active" id="bi-s1"><div class="bi-step-num">1</div>Setup Kampanye</div>
+        <div class="bi-step active" id="bi-s1"><div class="bi-step-num">1</div>Tujuan Kampanye</div>
         <div class="bi-step-line"></div>
-        <div class="bi-step" id="bi-s2"><div class="bi-step-num">2</div>Audience</div>
+        <div class="bi-step" id="bi-s2"><div class="bi-step-num">2</div>Audience &amp; Budget</div>
         <div class="bi-step-line"></div>
         <div class="bi-step" id="bi-s3"><div class="bi-step-num">3</div>Konten Iklan</div>
         <div class="bi-step-line"></div>
-        <div class="bi-step" id="bi-s4"><div class="bi-step-num">4</div>Review &amp; Launch</div>
+        <div class="bi-step" id="bi-s4"><div class="bi-step-num">4</div>Review &amp; Publish</div>
       </div>
 
       <div class="bi-body">
-        <!-- Step 1: Setup Kampanye -->
+
+        <!-- ─ Step 1: Tujuan Kampanye ─ -->
         <div id="bi-panel-1">
+          <!-- Akun & Page -->
           <div class="bi-section">
-            <div class="bi-section-title">Akun &amp; Halaman</div>
-            <div class="bi-field">
-              <label class="bi-label">Ad Account</label>
-              <select class="bi-select" id="bi-adaccount">
-                <option value="">— Pilih Ad Account —</option>
-              </select>
+            <div class="bi-section-title">Akun &amp; Halaman Facebook</div>
+            <div class="bi-grid2">
+              <div class="bi-field" style="margin-bottom:0">
+                <label class="bi-label">Ad Account</label>
+                <select class="bi-select" id="bi-adaccount" onchange="biLoadPages()">
+                  <option value="">— Pilih Ad Account —</option>
+                </select>
+              </div>
+              <div class="bi-field" style="margin-bottom:0">
+                <label class="bi-label">Facebook Page</label>
+                <div id="bi-page-wrap">
+                  <select class="bi-select" id="bi-page" style="margin-bottom:6px">
+                    <option value="">— Pilih Ad Account dulu —</option>
+                  </select>
+                  <div id="bi-page-manual-wrap" style="display:none">
+                    <input class="bi-input" id="bi-page-manual" type="text" placeholder="Atau ketik Page ID manual (cth: 123456789)" style="font-size:12px">
+                    <div style="font-size:11px;color:var(--text3);margin-top:3px">Cari Page ID di facebook.com/pg/[namapage]/about</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="bi-field">
-              <label class="bi-label">Facebook Page</label>
-              <select class="bi-select" id="bi-page">
-                <option value="">— Pilih dulu Ad Account —</option>
-              </select>
-            </div>
-          </div>
-          <div class="bi-section">
-            <div class="bi-section-title">Detail Kampanye</div>
-            <div class="bi-field">
+            <div class="bi-field" style="margin-top:12px;margin-bottom:0">
               <label class="bi-label">Nama Kampanye</label>
               <input class="bi-input" id="bi-name" type="text" placeholder="cth: Promo Ramadan 2025 — Herbal X">
             </div>
-            <div class="bi-field">
-              <label class="bi-label">Objective</label>
-              <select class="bi-select" id="bi-objective">
-                <option value="OUTCOME_LEADS">Leads — Kumpulkan data pelanggan</option>
-                <option value="OUTCOME_TRAFFIC">Traffic — Kirim ke website</option>
-                <option value="OUTCOME_SALES">Sales — Penjualan / Purchase</option>
-                <option value="OUTCOME_ENGAGEMENT">Engagement — Like, komentar, share</option>
-                <option value="OUTCOME_AWARENESS">Awareness — Jangkauan maksimal</option>
-              </select>
-            </div>
-            <div class="bi-field">
-              <label class="bi-label">Budget Harian (Rp)</label>
-              <input class="bi-input" id="bi-budget" type="number" min="10000" step="5000" placeholder="cth: 100000">
-              <div style="font-size:11px;color:var(--text3);margin-top:4px">Minimum Rp 10.000/hari</div>
-            </div>
           </div>
+
+          <!-- Objective Cards -->
+          <div class="bi-section">
+            <div class="bi-section-title">Pilih Tujuan Iklan</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Pilih tujuan yang paling sesuai dengan hasil yang ingin kamu capai.</div>
+            <div class="bi-obj-grid" id="bi-obj-grid">
+              <div class="bi-obj-card selected" data-obj="OUTCOME_AWARENESS" onclick="biSelectObj(this)">
+                <div class="bi-obj-icon" style="background:rgba(124,92,252,0.15)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#7c5cfc"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                </div>
+                <div class="bi-obj-name">Awareness</div>
+                <div class="bi-obj-desc">Jangkau lebih banyak orang yang kemungkinan mengingat iklanmu.</div>
+              </div>
+              <div class="bi-obj-card" data-obj="OUTCOME_TRAFFIC" onclick="biSelectObj(this)">
+                <div class="bi-obj-icon" style="background:rgba(79,142,247,0.15)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#4f8ef7"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                </div>
+                <div class="bi-obj-name">Traffic</div>
+                <div class="bi-obj-desc">Kirim orang ke website, aplikasi, atau halaman tertentu.</div>
+              </div>
+              <div class="bi-obj-card" data-obj="OUTCOME_ENGAGEMENT" onclick="biSelectObj(this)">
+                <div class="bi-obj-icon" style="background:rgba(245,166,35,0.15)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#f5a623"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+                </div>
+                <div class="bi-obj-name">Engagement</div>
+                <div class="bi-obj-desc">Dapat lebih banyak pesan, like, komentar, atau share postingan.</div>
+              </div>
+              <div class="bi-obj-card" data-obj="OUTCOME_LEADS" onclick="biSelectObj(this)">
+                <div class="bi-obj-icon" style="background:rgba(34,211,160,0.15)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#22d3a0"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+                <div class="bi-obj-name">Leads</div>
+                <div class="bi-obj-desc">Kumpulkan data calon pelanggan lewat formulir atau chat.</div>
+              </div>
+              <div class="bi-obj-card" data-obj="OUTCOME_APP_PROMOTION" onclick="biSelectObj(this)">
+                <div class="bi-obj-icon" style="background:rgba(79,142,247,0.12)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#60a5fa"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+                </div>
+                <div class="bi-obj-name">App Promotion</div>
+                <div class="bi-obj-desc">Cari pengguna baru untuk menginstal atau menggunakan aplikasimu.</div>
+              </div>
+              <div class="bi-obj-card" data-obj="OUTCOME_SALES" onclick="biSelectObj(this)">
+                <div class="bi-obj-icon" style="background:rgba(247,92,92,0.15)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#f75c5c"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 6.9 18 9 18h12v-2H9.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.5 5H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </div>
+                <div class="bi-obj-name">Sales</div>
+                <div class="bi-obj-desc">Jangkau orang yang kemungkinan besar akan membeli produkmu.</div>
+              </div>
+            </div>
+            <input type="hidden" id="bi-objective" value="OUTCOME_AWARENESS">
+          </div>
+
           <div class="bi-actions">
             <div></div>
-            <button class="btn btn-primary" onclick="biNext(1)">Lanjut: Audience →</button>
+            <button class="btn btn-primary" onclick="biNext(1)">Lanjut: Audience &amp; Budget →</button>
           </div>
         </div>
 
-        <!-- Step 2: Audience -->
+        <!-- ─ Step 2: Audience & Budget ─ -->
         <div id="bi-panel-2" style="display:none">
           <div class="bi-section">
-            <div class="bi-section-title">Lokasi &amp; Demografi</div>
+            <div class="bi-section-title">Audience</div>
             <div class="bi-field">
-              <label class="bi-label">Lokasi Target</label>
-              <input class="bi-input" id="bi-location" value="Indonesia" readonly style="color:var(--text2)">
-              <div style="font-size:11px;color:var(--text3);margin-top:4px">Default: seluruh Indonesia</div>
-            </div>
-            <div class="bi-grid2" style="margin-bottom:13px">
-              <div class="bi-field" style="margin-bottom:0">
-                <label class="bi-label">Umur Minimum</label>
-                <input class="bi-input" id="bi-age-min" type="number" value="18" min="18" max="64">
-              </div>
-              <div class="bi-field" style="margin-bottom:0">
-                <label class="bi-label">Umur Maksimum</label>
-                <input class="bi-input" id="bi-age-max" type="number" value="65" min="19" max="65">
+              <label class="bi-label">Lokasi</label>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text2)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                <span style="font-size:13px;font-weight:500">Indonesia</span>
+                <span style="font-size:11px;color:var(--text3);margin-left:4px">Seluruh Indonesia</span>
               </div>
             </div>
             <div class="bi-field">
+              <label class="bi-label">Rentang Umur</label>
+              <div style="display:flex;align-items:center;gap:10px">
+                <input class="bi-input" id="bi-age-min" type="number" value="18" min="18" max="64" style="width:90px;text-align:center">
+                <span style="color:var(--text2);font-size:13px">sampai</span>
+                <input class="bi-input" id="bi-age-max" type="number" value="65" min="19" max="65" style="width:90px;text-align:center">
+                <span style="font-size:12px;color:var(--text3)">tahun</span>
+              </div>
+            </div>
+            <div class="bi-field" style="margin-bottom:0">
               <label class="bi-label">Jenis Kelamin</label>
               <div class="bi-gender-btns">
-                <button class="bi-gender-btn active" id="bi-g-all" onclick="biSetGender('0')">Semua</button>
+                <button class="bi-gender-btn active" id="bi-g-all" onclick="biSetGender('0')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                  Semua
+                </button>
                 <button class="bi-gender-btn" id="bi-g-male" onclick="biSetGender('1')">Pria</button>
                 <button class="bi-gender-btn" id="bi-g-female" onclick="biSetGender('2')">Wanita</button>
               </div>
             </div>
           </div>
+
+          <div class="bi-section">
+            <div class="bi-section-title">Budget &amp; Jadwal</div>
+            <div class="bi-grid2">
+              <div class="bi-field" style="margin-bottom:0">
+                <label class="bi-label">Tipe Budget</label>
+                <div style="display:flex;gap:8px">
+                  <button class="bi-gender-btn active" id="bi-bt-daily" onclick="biBudgetType('daily')" style="flex:1;font-size:12px">Harian</button>
+                  <button class="bi-gender-btn" id="bi-bt-lifetime" onclick="biBudgetType('lifetime')" style="flex:1;font-size:12px">Total</button>
+                </div>
+              </div>
+              <div class="bi-field" style="margin-bottom:0">
+                <label class="bi-label">Jumlah Budget (Rp)</label>
+                <input class="bi-input" id="bi-budget" type="number" min="10000" step="5000" placeholder="cth: 100000">
+                <div style="font-size:11px;color:var(--text3);margin-top:3px" id="bi-budget-hint">Min. Rp 10.000 / hari</div>
+              </div>
+            </div>
+          </div>
+
           <div class="bi-actions">
             <button class="btn" onclick="biPrev(2)">← Kembali</button>
-            <button class="btn btn-primary" onclick="biNext(2)">Lanjut: Konten →</button>
+            <button class="btn btn-primary" onclick="biNext(2)">Lanjut: Konten Iklan →</button>
           </div>
         </div>
 
-        <!-- Step 3: Konten -->
+        <!-- ─ Step 3: Konten Iklan ─ -->
         <div id="bi-panel-3" style="display:none">
           <div class="bi-section">
-            <div class="bi-section-title">Upload Gambar Iklan</div>
-            <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Bisa upload lebih dari 1 gambar — tiap gambar jadi 1 Ad. Format: JPG, PNG. Maks 30MB/gambar.</div>
+            <div class="bi-section-title">Gambar Iklan</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Upload 1–10 gambar. Setiap gambar akan jadi 1 Ad. Format: JPG, PNG. Disarankan rasio 1:1 atau 4:5.</div>
             <input type="file" id="bi-file-input" accept="image/jpeg,image/png" multiple style="display:none" onchange="biHandleFiles(this)">
             <div class="bi-img-grid" id="bi-img-grid">
               <button class="bi-img-upload" onclick="document.getElementById('bi-file-input').click()">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="opacity:.5"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                <span>Tambah Gambar</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="opacity:.4"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                <span style="font-weight:500;color:var(--text)">Tambah Gambar</span>
+                <span style="font-size:10px">JPG, PNG</span>
               </button>
             </div>
             <div class="bi-upload-progress" id="bi-upload-bar"><div class="bi-upload-progress-fill" id="bi-upload-fill" style="width:0%"></div></div>
           </div>
+
           <div class="bi-section">
             <div class="bi-section-title">Teks Iklan</div>
             <div class="bi-field">
-              <label class="bi-label">Primary Text (Caption)</label>
-              <textarea class="bi-textarea" id="bi-primary-text" placeholder="Teks utama yang muncul di atas iklan..."></textarea>
+              <label class="bi-label">Primary Text <span style="color:var(--text3);font-weight:400">(teks utama di atas gambar)</span></label>
+              <textarea class="bi-textarea" id="bi-primary-text" placeholder="Tulis teks yang menarik perhatian audiens kamu..." style="min-height:90px"></textarea>
+              <div id="bi-pt-count" style="font-size:11px;color:var(--text3);margin-top:3px;text-align:right">0 / 125 karakter disarankan</div>
             </div>
             <div class="bi-field">
-              <label class="bi-label">Headline</label>
-              <input class="bi-input" id="bi-headline" type="text" placeholder="Judul singkat yang menarik perhatian">
+              <label class="bi-label">Headline <span style="color:var(--text3);font-weight:400">(judul di bawah gambar)</span></label>
+              <input class="bi-input" id="bi-headline" type="text" placeholder="Judul singkat dan menarik, maks 40 karakter" maxlength="40">
+              <div id="bi-hl-count" style="font-size:11px;color:var(--text3);margin-top:3px;text-align:right">0 / 40</div>
             </div>
+            <div class="bi-field" style="margin-bottom:0">
+              <label class="bi-label">Description <span style="color:var(--text3);font-weight:400">(opsional, muncul di bawah headline)</span></label>
+              <input class="bi-input" id="bi-description" type="text" placeholder="Info tambahan singkat...">
+            </div>
+          </div>
+
+          <div class="bi-section">
+            <div class="bi-section-title">Tombol &amp; Tujuan</div>
             <div class="bi-grid2">
               <div class="bi-field" style="margin-bottom:0">
-                <label class="bi-label">Tombol CTA</label>
+                <label class="bi-label">Tombol Call to Action</label>
                 <select class="bi-select" id="bi-cta">
                   <option value="LEARN_MORE">Learn More</option>
                   <option value="SHOP_NOW">Shop Now</option>
                   <option value="SIGN_UP">Sign Up</option>
                   <option value="GET_OFFER">Get Offer</option>
+                  <option value="GET_QUOTE">Get Quote</option>
                   <option value="CONTACT_US">Contact Us</option>
                   <option value="SEND_MESSAGE">Send Message</option>
+                  <option value="SEND_WHATSAPP_MESSAGE">Send WhatsApp Message</option>
                   <option value="BOOK_NOW">Book Now</option>
                   <option value="DOWNLOAD">Download</option>
+                  <option value="SUBSCRIBE">Subscribe</option>
+                  <option value="WATCH_MORE">Watch More</option>
                 </select>
               </div>
               <div class="bi-field" style="margin-bottom:0">
-                <label class="bi-label">URL Website / Landing Page</label>
+                <label class="bi-label">Website URL / Landing Page</label>
                 <input class="bi-input" id="bi-url" type="url" placeholder="https://...">
               </div>
             </div>
           </div>
+
           <div class="bi-actions">
             <button class="btn" onclick="biPrev(3)">← Kembali</button>
             <button class="btn btn-primary" onclick="biNext(3)">Lanjut: Review →</button>
           </div>
         </div>
 
-        <!-- Step 4: Review & Launch -->
+        <!-- ─ Step 4: Review & Publish ─ -->
         <div id="bi-panel-4" style="display:none">
           <div class="bi-section">
             <div class="bi-section-title">Ringkasan Kampanye</div>
             <div id="bi-review-content"></div>
           </div>
-          <div class="bi-section">
-            <div class="bi-section-title">Status Awal Kampanye</div>
-            <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Disarankan mulai PAUSED untuk review dulu di Meta Ads Manager sebelum diaktifkan.</div>
-            <div class="bi-status-toggle">
-              <button class="bi-status-btn active-paused" id="bi-status-paused" onclick="biSetStatus('PAUSED')">⏸ Paused (disarankan)</button>
-              <button class="bi-status-btn" id="bi-status-active" onclick="biSetStatus('ACTIVE')">▶ Langsung Aktif</button>
+
+          <!-- Preview mini iklan -->
+          <div class="bi-section" id="bi-preview-section" style="display:none">
+            <div class="bi-section-title">Preview Iklan (Gambar Pertama)</div>
+            <div style="max-width:320px;border:1px solid var(--border2);border-radius:12px;overflow:hidden;background:var(--surface2)">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1877F2,#4f8ef7);display:flex;align-items:center;justify-content:center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                </div>
+                <div>
+                  <div id="bi-prev-pagename" style="font-size:12px;font-weight:600">Nama Page</div>
+                  <div style="font-size:10px;color:var(--text3)">Sponsored · <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div>
+                </div>
+              </div>
+              <div id="bi-prev-text" style="font-size:12px;padding:0 12px 10px;color:var(--text);line-height:1.5"></div>
+              <div id="bi-prev-img" style="aspect-ratio:1;background:var(--surface3);overflow:hidden">
+                <img id="bi-prev-img-el" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
+              </div>
+              <div style="padding:10px 12px;border-top:1px solid var(--border)">
+                <div id="bi-prev-url" style="font-size:10px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div>
+                    <div id="bi-prev-headline" style="font-size:13px;font-weight:600"></div>
+                    <div id="bi-prev-desc" style="font-size:11px;color:var(--text2)"></div>
+                  </div>
+                  <div id="bi-prev-cta" style="font-size:11px;font-weight:600;padding:6px 12px;border-radius:6px;background:var(--surface3);white-space:nowrap;color:var(--text)"></div>
+                </div>
+              </div>
             </div>
           </div>
+
+          <div class="bi-section">
+            <div class="bi-section-title">Status Kampanye</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Disarankan mulai <b>Paused</b> — kamu bisa review dulu di Meta Ads Manager sebelum diaktifkan.</div>
+            <div class="bi-status-toggle">
+              <button class="bi-status-btn active-paused" id="bi-status-paused" onclick="biSetStatus('PAUSED')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                Paused (disarankan)
+              </button>
+              <button class="bi-status-btn" id="bi-status-active" onclick="biSetStatus('ACTIVE')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><path d="M8 5v14l11-7z"/></svg>
+                Aktifkan Langsung
+              </button>
+            </div>
+          </div>
+
           <div class="bi-actions">
             <button class="btn" onclick="biPrev(4)">← Kembali</button>
             <button class="btn btn-primary" id="bi-launch-btn" onclick="biLaunch()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-              Buat Kampanye
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              Publish Kampanye
             </button>
           </div>
 
           <!-- Result Panel -->
           <div class="bi-result-panel" id="bi-result-panel">
-            <div id="bi-result-icon" style="font-size:36px;margin-bottom:10px"></div>
-            <div id="bi-result-title" style="font-size:16px;font-weight:600;margin-bottom:6px"></div>
+            <div id="bi-result-icon" style="font-size:40px;margin-bottom:12px"></div>
+            <div id="bi-result-title" style="font-size:17px;font-weight:600;margin-bottom:6px"></div>
             <div id="bi-result-sub" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
             <div id="bi-result-ads" style="text-align:left;margin-bottom:16px"></div>
             <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-              <button class="btn btn-primary" id="bi-result-link" onclick="" style="display:none">Buka di Meta Ads Manager</button>
+              <button class="btn btn-primary" id="bi-result-link" style="display:none">Buka Meta Ads Manager</button>
               <button class="btn" onclick="biReset()">Buat Kampanye Baru</button>
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -5647,45 +5782,88 @@ function buildDateHelper(suffix, rangeObj) {
 let _biStep = 1;
 let _biGender = '0';
 let _biStatus = 'PAUSED';
+let _biBudgetType = 'daily';
 let _biImages = []; // { file, dataUrl, name }
-let _biPages = [];
 let _biInitDone = false;
+
+const _biObjLabels = {
+  OUTCOME_AWARENESS:'Awareness', OUTCOME_TRAFFIC:'Traffic',
+  OUTCOME_ENGAGEMENT:'Engagement', OUTCOME_LEADS:'Leads',
+  OUTCOME_APP_PROMOTION:'App Promotion', OUTCOME_SALES:'Sales'
+};
+const _biGenderLabels = { '0':'Semua', '1':'Pria', '2':'Wanita' };
+const _biCtaLabels = {
+  LEARN_MORE:'Learn More', SHOP_NOW:'Shop Now', SIGN_UP:'Sign Up',
+  GET_OFFER:'Get Offer', GET_QUOTE:'Get Quote', CONTACT_US:'Contact Us',
+  SEND_MESSAGE:'Send Message', SEND_WHATSAPP_MESSAGE:'WhatsApp',
+  BOOK_NOW:'Book Now', DOWNLOAD:'Download', SUBSCRIBE:'Subscribe', WATCH_MORE:'Watch More'
+};
 
 async function biInit() {
   if (_biInitDone) return;
   _biInitDone = true;
-  // Isi dropdown ad account dari cachedMetaAccounts
   const sel = document.getElementById('bi-adaccount');
   sel.innerHTML = '<option value="">— Pilih Ad Account —</option>';
+  const token = apiConfig.meta && apiConfig.meta.token;
   if (cachedMetaAccounts && cachedMetaAccounts.length) {
-    cachedMetaAccounts.forEach(acc => {
-      sel.innerHTML += `<option value="${acc.id}">${acc.name}</option>`;
-    });
-  } else if (apiConfig.meta && apiConfig.meta.token) {
-    // Fetch accounts if not cached
+    cachedMetaAccounts.forEach(acc => { sel.innerHTML += `<option value="${acc.id}">${acc.name}</option>`; });
+  } else if (token) {
     try {
-      const r = await fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${apiConfig.meta.token}&fields=id,name&limit=50`);
+      const r = await fetch(`https://graph.facebook.com/v19.0/me/adaccounts?access_token=${token}&fields=id,name&limit=50`);
       const d = await r.json();
-      (d.data || []).forEach(acc => {
-        sel.innerHTML += `<option value="${acc.id}">${acc.name}</option>`;
-      });
+      (d.data || []).forEach(acc => { sel.innerHTML += `<option value="${acc.id}">${acc.name}</option>`; });
     } catch(e) {}
   }
-  sel.onchange = biLoadPages;
+  // Pasang character counter
+  const pt = document.getElementById('bi-primary-text');
+  if (pt) pt.oninput = () => {
+    document.getElementById('bi-pt-count').textContent = `${pt.value.length} / 125 karakter disarankan`;
+  };
+  const hl = document.getElementById('bi-headline');
+  if (hl) hl.oninput = () => {
+    document.getElementById('bi-hl-count').textContent = `${hl.value.length} / 40`;
+  };
 }
 
 async function biLoadPages() {
   const token = apiConfig.meta && apiConfig.meta.token;
   const pageSel = document.getElementById('bi-page');
+  const manualWrap = document.getElementById('bi-page-manual-wrap');
   pageSel.innerHTML = '<option value="">Memuat halaman...</option>';
-  if (!token) { pageSel.innerHTML = '<option value="">Token Meta belum diset</option>'; return; }
+  if (!token) {
+    pageSel.innerHTML = '<option value="">Token Meta belum diset</option>';
+    manualWrap.style.display = 'block';
+    return;
+  }
   try {
     const r = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}&fields=id,name&limit=50`);
     const d = await r.json();
-    _biPages = d.data || [];
+    const pages = d.data || [];
+    if (pages.length === 0) {
+      pageSel.innerHTML = '<option value="">Tidak ada Page ditemukan</option>';
+      manualWrap.style.display = 'block'; // tampilkan input manual
+      return;
+    }
     pageSel.innerHTML = '<option value="">— Pilih Facebook Page —</option>';
-    _biPages.forEach(p => { pageSel.innerHTML += `<option value="${p.id}">${p.name}</option>`; });
-  } catch(e) { pageSel.innerHTML = '<option value="">Gagal muat halaman</option>'; }
+    pages.forEach(p => { pageSel.innerHTML += `<option value="${p.id}">${p.name}</option>`; });
+    manualWrap.style.display = 'none';
+  } catch(e) {
+    pageSel.innerHTML = '<option value="">Gagal memuat Page</option>';
+    manualWrap.style.display = 'block';
+  }
+}
+
+function biGetPageId() {
+  const sel = document.getElementById('bi-page');
+  if (sel.value) return sel.value;
+  const manual = document.getElementById('bi-page-manual');
+  return manual ? manual.value.trim() : '';
+}
+
+function biSelectObj(card) {
+  document.querySelectorAll('.bi-obj-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById('bi-objective').value = card.dataset.obj;
 }
 
 function biSetGender(g) {
@@ -5693,6 +5871,13 @@ function biSetGender(g) {
   ['all','male','female'].forEach(id => document.getElementById('bi-g-'+id).classList.remove('active'));
   const map = { '0':'all', '1':'male', '2':'female' };
   document.getElementById('bi-g-'+map[g]).classList.add('active');
+}
+
+function biBudgetType(t) {
+  _biBudgetType = t;
+  document.getElementById('bi-bt-daily').classList.toggle('active', t === 'daily');
+  document.getElementById('bi-bt-lifetime').classList.toggle('active', t === 'lifetime');
+  document.getElementById('bi-budget-hint').textContent = t === 'daily' ? 'Min. Rp 10.000 / hari' : 'Total budget selama periode kampanye';
 }
 
 function biSetStatus(s) {
@@ -5704,9 +5889,9 @@ function biSetStatus(s) {
 function biGoToStep(n) {
   for (let i = 1; i <= 4; i++) {
     document.getElementById('bi-panel-'+i).style.display = i === n ? '' : 'none';
-    const stepEl = document.getElementById('bi-s'+i);
-    stepEl.classList.toggle('active', i === n);
-    stepEl.classList.toggle('done', i < n);
+    const el = document.getElementById('bi-s'+i);
+    el.classList.toggle('active', i === n);
+    el.classList.toggle('done', i < n);
   }
   _biStep = n;
   window.scrollTo(0, 0);
@@ -5715,13 +5900,15 @@ function biGoToStep(n) {
 function biNext(from) {
   if (from === 1) {
     const acc = document.getElementById('bi-adaccount').value;
-    const pg  = document.getElementById('bi-page').value;
+    const pg  = biGetPageId();
     const nm  = document.getElementById('bi-name').value.trim();
-    const bud = parseFloat(document.getElementById('bi-budget').value);
     if (!acc) { alert('Pilih Ad Account dulu.'); return; }
-    if (!pg)  { alert('Pilih Facebook Page dulu.'); return; }
+    if (!pg)  { alert('Pilih Facebook Page atau isi Page ID manual.'); return; }
     if (!nm)  { alert('Isi Nama Kampanye.'); return; }
-    if (!bud || bud < 10000) { alert('Budget harian minimal Rp 10.000.'); return; }
+  }
+  if (from === 2) {
+    const bud = parseFloat(document.getElementById('bi-budget').value);
+    if (!bud || bud < 10000) { alert('Budget minimal Rp 10.000.'); return; }
   }
   if (from === 3) {
     if (_biImages.length === 0) { alert('Upload minimal 1 gambar iklan.'); return; }
@@ -5730,8 +5917,9 @@ function biNext(from) {
     const url = document.getElementById('bi-url').value.trim();
     if (!pt)  { alert('Isi Primary Text.'); return; }
     if (!hl)  { alert('Isi Headline.'); return; }
-    if (!url) { alert('Isi URL website / landing page.'); return; }
+    if (!url) { alert('Isi Website URL.'); return; }
     biRenderReview();
+    biRenderPreview();
   }
   biGoToStep(from + 1);
 }
@@ -5739,8 +5927,7 @@ function biNext(from) {
 function biPrev(from) { biGoToStep(from - 1); }
 
 function biHandleFiles(input) {
-  const files = Array.from(input.files);
-  files.forEach(file => {
+  Array.from(input.files).forEach(file => {
     if (_biImages.length >= 10) { alert('Maksimal 10 gambar.'); return; }
     const reader = new FileReader();
     reader.onload = e => {
@@ -5756,56 +5943,69 @@ function biRenderImageGrid() {
   const grid = document.getElementById('bi-img-grid');
   grid.innerHTML = '';
   _biImages.forEach((img, i) => {
-    grid.innerHTML += `
-      <div class="bi-img-thumb">
-        <img src="${img.dataUrl}" alt="${img.name}">
-        <div class="bi-img-name">${img.name}</div>
-        <button class="bi-img-del" onclick="biRemoveImage(${i})" title="Hapus">✕</button>
-      </div>`;
+    grid.innerHTML += `<div class="bi-img-thumb">
+      <img src="${img.dataUrl}" alt="${img.name}">
+      <div class="bi-img-name">${img.name}</div>
+      <button class="bi-img-del" onclick="biRemoveImage(${i})" title="Hapus">✕</button>
+    </div>`;
   });
-  // Tombol tambah
   if (_biImages.length < 10) {
-    grid.innerHTML += `
-      <button class="bi-img-upload" onclick="document.getElementById('bi-file-input').click()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="opacity:.5"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        <span>Tambah</span>
-      </button>`;
+    grid.innerHTML += `<button class="bi-img-upload" onclick="document.getElementById('bi-file-input').click()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="opacity:.4"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+      <span style="font-weight:500;color:var(--text)">Tambah Gambar</span>
+      <span style="font-size:10px">JPG, PNG</span>
+    </button>`;
   }
 }
 
-function biRemoveImage(i) {
-  _biImages.splice(i, 1);
-  biRenderImageGrid();
-}
-
-const _biObjLabels = {
-  OUTCOME_LEADS:'Leads', OUTCOME_TRAFFIC:'Traffic', OUTCOME_SALES:'Sales',
-  OUTCOME_ENGAGEMENT:'Engagement', OUTCOME_AWARENESS:'Awareness'
-};
-const _biGenderLabels = { '0':'Semua', '1':'Pria', '2':'Wanita' };
+function biRemoveImage(i) { _biImages.splice(i, 1); biRenderImageGrid(); }
 
 function biRenderReview() {
   const acc = document.getElementById('bi-adaccount');
-  const pg  = document.getElementById('bi-page');
   const accName = acc.options[acc.selectedIndex]?.text || '';
-  const pgName  = pg.options[pg.selectedIndex]?.text || '';
-  const obj  = document.getElementById('bi-objective').value;
-  const bud  = parseFloat(document.getElementById('bi-budget').value);
-  const html = `
+  const pgSel = document.getElementById('bi-page');
+  const pgName = pgSel.value
+    ? (pgSel.options[pgSel.selectedIndex]?.text || '')
+    : document.getElementById('bi-page-manual')?.value || '';
+  const obj = document.getElementById('bi-objective').value;
+  const bud = parseFloat(document.getElementById('bi-budget').value);
+  document.getElementById('bi-review-content').innerHTML = `
     <div class="bi-review-row"><span class="bi-review-label">Ad Account</span><span class="bi-review-val">${accName}</span></div>
     <div class="bi-review-row"><span class="bi-review-label">Facebook Page</span><span class="bi-review-val">${pgName}</span></div>
     <div class="bi-review-row"><span class="bi-review-label">Nama Kampanye</span><span class="bi-review-val">${document.getElementById('bi-name').value}</span></div>
     <div class="bi-review-row"><span class="bi-review-label">Objective</span><span class="bi-review-val">${_biObjLabels[obj]||obj}</span></div>
-    <div class="bi-review-row"><span class="bi-review-label">Budget Harian</span><span class="bi-review-val">Rp${Math.round(bud).toLocaleString('id-ID')}</span></div>
-    <div class="bi-review-row"><span class="bi-review-label">Lokasi</span><span class="bi-review-val">Indonesia</span></div>
-    <div class="bi-review-row"><span class="bi-review-label">Umur</span><span class="bi-review-val">${document.getElementById('bi-age-min').value}–${document.getElementById('bi-age-max').value} tahun</span></div>
-    <div class="bi-review-row"><span class="bi-review-label">Gender</span><span class="bi-review-val">${_biGenderLabels[_biGender]}</span></div>
-    <div class="bi-review-row"><span class="bi-review-label">Jumlah Gambar</span><span class="bi-review-val">${_biImages.length} gambar → ${_biImages.length} Ad</span></div>
+    <div class="bi-review-row"><span class="bi-review-label">Budget</span><span class="bi-review-val">Rp${Math.round(bud).toLocaleString('id-ID')} / ${_biBudgetType==='daily'?'hari':'total'}</span></div>
+    <div class="bi-review-row"><span class="bi-review-label">Audience</span><span class="bi-review-val">Indonesia · ${document.getElementById('bi-age-min').value}–${document.getElementById('bi-age-max').value} thn · ${_biGenderLabels[_biGender]}</span></div>
+    <div class="bi-review-row"><span class="bi-review-label">Jumlah Ad</span><span class="bi-review-val">${_biImages.length} gambar → ${_biImages.length} Ad</span></div>
     <div class="bi-review-row"><span class="bi-review-label">Headline</span><span class="bi-review-val">${document.getElementById('bi-headline').value}</span></div>
-    <div class="bi-review-row"><span class="bi-review-label">CTA</span><span class="bi-review-val">${document.getElementById('bi-cta').value}</span></div>
+    <div class="bi-review-row"><span class="bi-review-label">CTA</span><span class="bi-review-val">${_biCtaLabels[document.getElementById('bi-cta').value]||''}</span></div>
     <div class="bi-review-row"><span class="bi-review-label">Website URL</span><span class="bi-review-val" style="word-break:break-all">${document.getElementById('bi-url').value}</span></div>
   `;
-  document.getElementById('bi-review-content').innerHTML = html;
+}
+
+function biRenderPreview() {
+  if (_biImages.length === 0) return;
+  const prevSection = document.getElementById('bi-preview-section');
+  prevSection.style.display = '';
+  // Page name
+  const pgSel = document.getElementById('bi-page');
+  const pgName = pgSel.value ? (pgSel.options[pgSel.selectedIndex]?.text || 'Halaman Kamu') : 'Halaman Kamu';
+  document.getElementById('bi-prev-pagename').textContent = pgName;
+  // Teks
+  const pt = document.getElementById('bi-primary-text').value;
+  document.getElementById('bi-prev-text').textContent = pt.length > 80 ? pt.slice(0,80)+'...' : pt;
+  // Gambar
+  const img = document.getElementById('bi-prev-img-el');
+  img.src = _biImages[0].dataUrl;
+  img.style.display = 'block';
+  // URL display
+  try {
+    const url = new URL(document.getElementById('bi-url').value);
+    document.getElementById('bi-prev-url').textContent = url.hostname.toUpperCase();
+  } catch(e) { document.getElementById('bi-prev-url').textContent = ''; }
+  document.getElementById('bi-prev-headline').textContent = document.getElementById('bi-headline').value;
+  document.getElementById('bi-prev-desc').textContent = document.getElementById('bi-description').value;
+  document.getElementById('bi-prev-cta').textContent = _biCtaLabels[document.getElementById('bi-cta').value] || 'Learn More';
 }
 
 async function biUploadImage(file, token, adAccountId) {
@@ -5817,10 +6017,7 @@ async function biUploadImage(file, token, adAccountId) {
         const fd = new FormData();
         fd.append('bytes', base64);
         fd.append('access_token', token);
-        const r = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adimages`, {
-          method: 'POST',
-          body: fd
-        });
+        const r = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adimages`, { method:'POST', body:fd });
         const d = await r.json();
         if (d.error) return reject(d.error.message);
         const hash = Object.values(d.images || {})[0]?.hash;
@@ -5837,10 +6034,9 @@ async function biLaunch() {
   if (!token) { alert('Token Meta belum diset. Buka Integrasi → Meta Ads dulu.'); return; }
 
   const launchBtn = document.getElementById('bi-launch-btn');
+  const resultPanel = document.getElementById('bi-result-panel');
   launchBtn.disabled = true;
   launchBtn.textContent = 'Memproses...';
-
-  const resultPanel = document.getElementById('bi-result-panel');
   resultPanel.style.display = 'block';
   document.getElementById('bi-result-icon').textContent = '⏳';
   document.getElementById('bi-result-title').textContent = 'Mengupload gambar ke Meta...';
@@ -5849,12 +6045,11 @@ async function biLaunch() {
   document.getElementById('bi-result-link').style.display = 'none';
 
   const adAccountId = document.getElementById('bi-adaccount').value;
-  const pageId      = document.getElementById('bi-page').value;
-
-  // Upload images directly to Meta
+  const pageId = biGetPageId();
   const bar = document.getElementById('bi-upload-bar');
   const fill = document.getElementById('bi-upload-fill');
   bar.style.display = 'block';
+
   const imageHashes = [];
   for (let i = 0; i < _biImages.length; i++) {
     document.getElementById('bi-result-sub').textContent = `Upload gambar ${i+1} dari ${_biImages.length}...`;
@@ -5867,7 +6062,7 @@ async function biLaunch() {
       document.getElementById('bi-result-title').textContent = 'Gagal upload gambar';
       document.getElementById('bi-result-sub').textContent = `${_biImages[i].name}: ${e}`;
       launchBtn.disabled = false;
-      launchBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>Buat Kampanye';
+      launchBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>Publish Kampanye';
       return;
     }
   }
@@ -5875,61 +6070,52 @@ async function biLaunch() {
   document.getElementById('bi-result-title').textContent = 'Membuat kampanye di Meta...';
   fill.style.width = '70%';
 
-  // Call our API to create campaign, adset, creatives, ads
   try {
+    const bud = parseFloat(document.getElementById('bi-budget').value);
     const payload = {
-      token,
-      ad_account_id: adAccountId,
-      page_id:       pageId,
+      token, ad_account_id: adAccountId, page_id: pageId,
       campaign_name: document.getElementById('bi-name').value.trim(),
       objective:     document.getElementById('bi-objective').value,
-      daily_budget:  parseFloat(document.getElementById('bi-budget').value),
-      age_min:       parseInt(document.getElementById('bi-age-min').value),
-      age_max:       parseInt(document.getElementById('bi-age-max').value),
-      genders:       _biGender === '0' ? 'all' : _biGender,
-      primary_text:  document.getElementById('bi-primary-text').value.trim(),
-      headline:      document.getElementById('bi-headline').value.trim(),
-      cta:           document.getElementById('bi-cta').value,
-      website_url:   document.getElementById('bi-url').value.trim(),
-      image_hashes:  imageHashes,
-      status:        _biStatus
+      daily_budget:  _biBudgetType === 'daily' ? bud : null,
+      lifetime_budget: _biBudgetType === 'lifetime' ? bud : null,
+      age_min:  parseInt(document.getElementById('bi-age-min').value),
+      age_max:  parseInt(document.getElementById('bi-age-max').value),
+      genders:  _biGender === '0' ? 'all' : _biGender,
+      primary_text: document.getElementById('bi-primary-text').value.trim(),
+      headline:     document.getElementById('bi-headline').value.trim(),
+      description:  document.getElementById('bi-description').value.trim(),
+      cta:          document.getElementById('bi-cta').value,
+      website_url:  document.getElementById('bi-url').value.trim(),
+      image_hashes: imageHashes,
+      status:       _biStatus
     };
     const resp = await fetch('/api/create-campaign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type':'application/json' },
       body: JSON.stringify(payload)
     });
     const result = await resp.json();
     fill.style.width = '100%';
+    if (result.error) throw new Error(result.error + (result.step ? ` (${result.step})` : ''));
 
-    if (result.error) throw new Error(result.error + (result.step ? ` (step: ${result.step})` : ''));
-
-    const successAds = result.ads.filter(a => a.ad_id);
-    const failedAds  = result.ads.filter(a => a.error);
-
-    document.getElementById('bi-result-icon').textContent = successAds.length > 0 ? '✅' : '⚠️';
-    document.getElementById('bi-result-title').textContent = successAds.length > 0
-      ? `Kampanye berhasil dibuat!`
-      : 'Kampanye dibuat, tapi semua Ad gagal';
-    document.getElementById('bi-result-sub').textContent =
-      `${successAds.length} dari ${result.ads.length} Ad berhasil · Status: ${result.status}`;
+    const okAds = result.ads.filter(a => a.ad_id);
+    document.getElementById('bi-result-icon').textContent = okAds.length > 0 ? '✅' : '⚠️';
+    document.getElementById('bi-result-title').textContent = okAds.length > 0 ? 'Kampanye berhasil dibuat!' : 'Ada yang gagal';
+    document.getElementById('bi-result-sub').textContent = `${okAds.length} dari ${result.ads.length} Ad berhasil · Status: ${result.status}`;
 
     let adsHtml = '<div style="border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-top:4px">';
     result.ads.forEach(ad => {
       const ok = !!ad.ad_id;
       adsHtml += `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px">
-        <span>${ok ? '✅' : '❌'}</span>
-        <span style="flex:1">${ad.name}</span>
-        <span style="color:${ok?'var(--green-text)':'var(--red-text)'};font-family:var(--mono)">${ok ? ad.ad_id : 'Gagal: '+ad.error}</span>
+        <span>${ok?'✅':'❌'}</span><span style="flex:1">${ad.name}</span>
+        <span style="color:${ok?'var(--green-text)':'var(--red-text)'};font-family:var(--mono);font-size:11px">${ok?ad.ad_id:'Gagal: '+ad.error}</span>
       </div>`;
     });
-    adsHtml += '</div>';
-    document.getElementById('bi-result-ads').innerHTML = adsHtml;
+    document.getElementById('bi-result-ads').innerHTML = adsHtml + '</div>';
 
     if (result.meta_url) {
-      const linkBtn = document.getElementById('bi-result-link');
-      linkBtn.style.display = '';
-      linkBtn.onclick = () => window.open(result.meta_url, '_blank');
+      const lb = document.getElementById('bi-result-link');
+      lb.style.display = '';
+      lb.onclick = () => window.open(result.meta_url, '_blank');
     }
   } catch(e) {
     document.getElementById('bi-result-icon').textContent = '❌';
@@ -5939,25 +6125,27 @@ async function biLaunch() {
 
   bar.style.display = 'none';
   launchBtn.disabled = false;
-  launchBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>Buat Kampanye';
+  launchBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>Publish Kampanye';
 }
 
 function biReset() {
-  _biStep = 1;
-  _biGender = '0';
-  _biStatus = 'PAUSED';
-  _biImages = [];
-  _biInitDone = false;
-  // Reset form fields
-  ['bi-name','bi-budget','bi-primary-text','bi-headline','bi-url'].forEach(id => {
+  _biStep = 1; _biGender = '0'; _biStatus = 'PAUSED'; _biBudgetType = 'daily';
+  _biImages = []; _biInitDone = false;
+  ['bi-name','bi-budget','bi-primary-text','bi-headline','bi-description','bi-url'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('bi-adaccount').value = '';
-  document.getElementById('bi-page').innerHTML = '<option value="">— Pilih dulu Ad Account —</option>';
+  document.getElementById('bi-page').innerHTML = '<option value="">— Pilih Ad Account dulu —</option>';
+  document.getElementById('bi-page-manual-wrap').style.display = 'none';
   document.getElementById('bi-result-panel').style.display = 'none';
+  document.getElementById('bi-preview-section').style.display = 'none';
   document.getElementById('bi-upload-bar').style.display = 'none';
+  document.querySelectorAll('.bi-obj-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector('.bi-obj-card[data-obj="OUTCOME_AWARENESS"]').classList.add('selected');
+  document.getElementById('bi-objective').value = 'OUTCOME_AWARENESS';
   biRenderImageGrid();
   biSetGender('0');
+  biBudgetType('daily');
   biSetStatus('PAUSED');
   biGoToStep(1);
   biInit();
