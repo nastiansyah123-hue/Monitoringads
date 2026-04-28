@@ -7,9 +7,9 @@ module.exports = async function handler(req, res) {
 
   const {
     token, ad_account_id, page_id,
-    campaign_name, objective, daily_budget,
+    campaign_name, objective, daily_budget, lifetime_budget,
     age_min, age_max, genders,
-    primary_text, headline, cta, website_url,
+    primary_text, headline, description, cta, website_url,
     image_hashes, // array of { hash, name }
     status
   } = req.body || {};
@@ -25,11 +25,12 @@ module.exports = async function handler(req, res) {
 
   // Map objective → optimization_goal + billing_event
   const goalMap = {
-    OUTCOME_LEADS:      { opt: 'LEAD_GENERATION',      bill: 'IMPRESSIONS' },
-    OUTCOME_TRAFFIC:    { opt: 'LINK_CLICKS',           bill: 'LINK_CLICKS' },
-    OUTCOME_SALES:      { opt: 'OFFSITE_CONVERSIONS',   bill: 'IMPRESSIONS' },
-    OUTCOME_ENGAGEMENT: { opt: 'POST_ENGAGEMENT',       bill: 'POST_ENGAGEMENT' },
-    OUTCOME_AWARENESS:  { opt: 'REACH',                 bill: 'IMPRESSIONS' },
+    OUTCOME_LEADS:          { opt: 'LEAD_GENERATION',      bill: 'IMPRESSIONS' },
+    OUTCOME_TRAFFIC:        { opt: 'LINK_CLICKS',           bill: 'LINK_CLICKS' },
+    OUTCOME_SALES:          { opt: 'OFFSITE_CONVERSIONS',   bill: 'IMPRESSIONS' },
+    OUTCOME_ENGAGEMENT:     { opt: 'POST_ENGAGEMENT',       bill: 'POST_ENGAGEMENT' },
+    OUTCOME_AWARENESS:      { opt: 'REACH',                 bill: 'IMPRESSIONS' },
+    OUTCOME_APP_PROMOTION:  { opt: 'APP_INSTALLS',          bill: 'IMPRESSIONS' },
   };
   const { opt: optimization_goal, bill: billing_event } = goalMap[objective] || goalMap.OUTCOME_LEADS;
 
@@ -63,7 +64,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         name: campaign_name + ' — Ad Set',
         campaign_id: camp.id,
-        daily_budget: Math.round(daily_budget || 50000),
+        ...(lifetime_budget ? { lifetime_budget: Math.round(lifetime_budget) } : { daily_budget: Math.round(daily_budget || 50000) }),
         billing_event,
         optimization_goal,
         targeting,
@@ -90,6 +91,7 @@ module.exports = async function handler(req, res) {
             link: website_url,
             message: primary_text,
             name: headline,
+            ...(description ? { description } : {}),
             call_to_action: {
               type: cta || 'LEARN_MORE',
               value: { link: website_url }
